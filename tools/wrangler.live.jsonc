@@ -1,0 +1,9 @@
+// just publish: el Worker de LIVE_BASE sólo sirve archivos (dist/live, de tools/sign-update.mjs).
+// html_handling none: game/index.html se sirve tal cual (sin 307 a game/), como pide el manifiesto firmado.
+// @step publish/deploy
+{
+  "name": "proud-base-b2c0",
+  "compatibility_date": "2026-11-01",
+  // @step publish/distlive
+  "assets": { "directory": "../dist/live", "html_handling": "none" }
+}

@@ -1,0 +1,96 @@
+# PokéSurvivor para Switch (homebrew, libnx): el mismo código que escritorio con platform/switch.c. Ver SWITCH.md.
+#   just switch      (en Docker, imagen pokesurvivor-switch: native/switch/Dockerfile) → build/switch/PokeSurvivor.nro
+# Necesita devkitPro (DEVKITPRO) con switch-sdl2 y switch-mesa (los trae la imagen). QuickJS: third_party/quickjs.
+# Red: net.c con el curl 8 de la imagen (/opt/curl8: WebSocket) y cooperativo online con libdatachannel (webrtc.c), los
+# dos sobre la mbedTLS 3 de la imagen (/opt/mbed3; native/switch/Dockerfile). Lo que libnx/newlib no traen para usrsctp y
+# libjuice: switch/include (cabeceras) y platform/switch.c (getifaddrs, mbedtls_hardware_poll, mbedtls_ms_time).
+# @step switch/elf build "Makefile.switch"
+# El mismo C con platform/switch.c (libnx) y update.c.
+# @next romfs
+CURL8 ?= /opt/curl8
+MBED3 ?= /opt/mbed3
+
+DEVKITPRO ?= /opt/devkitpro
+B    ?= build/switch
+TC   := $(DEVKITPRO)/devkitA64/bin/aarch64-none-elf-
+CC   := $(TC)gcc
+CXX  := $(TC)g++
+AR   := $(TC)gcc-ar
+PORT := $(DEVKITPRO)/portlibs/switch
+PKG  := $(PORT)/bin/aarch64-none-elf-pkg-config
+PVG  := third_party/plutovg
+QJS  := third_party/quickjs
+VER  := $(shell cat ../VERSION 2>/dev/null || echo 0.0.0)
+
+ARCH    := -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
+# GCC no hace caso de «#pragma STDC FP_CONTRACT OFF» (core/core.h): sin esto funde a*b+c (FMA) y el núcleo deja de dar lo
+# mismo que el JS, bit a bit.
+FPFLAGS := -ffp-contract=off
+CFLAGS  := $(ARCH) $(FPFLAGS) -O2 -ffunction-sections -Wall -Wno-unused-function -D__SWITCH__ -DPS5_DEV -DWORKERS=2 -I$(CURL8)/include -I$(MBED3)/include -I. -Icore -Ithird_party/monocypher -I$(QJS) \
+           -I$(PVG)/include -DPLUTOVG_BUILD -DPLUTOVG_BUILD_STATIC -DPLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD -I$(DEVKITPRO)/libnx/include -I$(PORT)/include \
+           -Ithird_party/libdatachannel/include `$(PKG) --cflags sdl2` \
+           -D__real_getaddrinfo=getaddrinfo -D__real_freeaddrinfo=freeaddrinfo   # (webrtc.c los envuelve sólo en PS5)
+# --wrap: main y pthread_create con pila grande; el applet de mandos que abre SDL, con el modo elegido (platform/switch.c).
+LDFLAGS := -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,--wrap=main,--wrap=pthread_create,--wrap=hidLaShowControllerSupportForSystem -Wl,-Map,$(B)/pokesurvivor.map
+LIBS    := $(B)/libdatachannel.a $(CURL8)/lib/libcurl.a $(MBED3)/lib/libmbedtls.a $(MBED3)/lib/libmbedx509.a \
+           $(MBED3)/lib/libmbedcrypto.a -lz `$(PKG) --libs sdl2` -lstdc++ -lnx -lm
+
+SRCS := main.c platform/switch.c canvas.c gpu.c audio.c tiles_worker.c net.c webrtc.c core_js.c update.c third_party/monocypher/monocypher.c third_party/monocypher/monocypher-ed25519.c \
+        core/world.c core/sim.c core/combat.c core/pickup.c core/abil.c core/foe.c core/map.c core/data.c \
+        $(wildcard $(PVG)/source/*.c)
+QJS_SRCS := $(QJS)/quickjs.c $(QJS)/dtoa.c $(QJS)/libregexp.c $(QJS)/libunicode.c $(QJS)/cutils.c
+OBJS := $(patsubst %.c,$(B)/obj/%.o,$(SRCS))
+
+$(B)/PokeSurvivor.nro: $(B)/pokesurvivor.elf $(B)/romfs/shim/boot.js switch/icon.jpg
+	$(DEVKITPRO)/tools/bin/nacptool --create "PokéSurvivor" "PokéSurvivor" "$(VER)" $(B)/pokesurvivor.nacp
+	$(DEVKITPRO)/tools/bin/elf2nro $< $@ --icon=switch/icon.jpg --nacp=$(B)/pokesurvivor.nacp --romfsdir=$(B)/romfs
+
+$(B)/obj/%.o: %.c platform.h canvas.h gpu.h audio.h tiles_worker.h net.h webrtc.h core/core.h Makefile.switch
+	@mkdir -p $(@D); $(CC) $(CFLAGS) -c -o $@ $<
+
+$(B)/pokesurvivor.elf: $(OBJS) $(B)/libquickjs.a $(B)/libdatachannel.a
+	$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(B)/libquickjs.a $(LIBS)
+
+# libdatachannel (cooperativo online), con las opciones de Makefile.desktop salvo la TLS: mbedTLS 3 (la de curl).
+DC    := third_party/libdatachannel
+SCTP  := $(DC)/deps/usrsctp/usrsctplib
+JUICE := $(DC)/deps/libjuice
+RTC_C_SCTP  := $(wildcard $(SCTP)/netinet/*.c $(SCTP)/netinet6/*.c $(SCTP)/user_*.c)
+RTC_C_JUICE := $(filter-out %/server.c,$(wildcard $(JUICE)/src/*.c))
+RTC_CXX     := $(wildcard $(DC)/src/*.cpp $(DC)/src/impl/*.cpp)
+RTC_OBJS    := $(patsubst %,$(B)/%.o,$(RTC_C_SCTP) $(RTC_C_JUICE) $(RTC_CXX))
+COMPAT      := -D__SWITCH__ -I$(MBED3)/include -Iswitch/include -include usrsctp_switch.h -isystem $(DEVKITPRO)/libnx/include
+SCTP_FLAGS  := $(COMPAT) -DSCTP_USE_OPENSSL_RAND -D__Userspace__ -DSCTP_SIMPLE_ALLOCATOR -DSCTP_PROCESS_LEVEL_LOCKS \
+               '-DSCTP_STDINT_INCLUDE=<stdint.h>' -DHAVE_SYS_QUEUE_H -DHAVE_STDATOMIC_H -DHAVE_SA_LEN -DHAVE_SIN_LEN \
+               -DHAVE_SIN6_LEN -DHAVE_SCONN_LEN -D_GNU_SOURCE -I$(SCTP)
+JUICE_FLAGS := $(COMPAT) -DJUICE_STATIC -DJUICE_EXPORTS -DUSE_NETTLE=0 -DNO_SERVER -DRELEASE=1 -I$(JUICE)/include/juice -I$(JUICE)/include
+# (gnu++17: con c++17 a secas, newlib esconde lo de BSD: sockaddr_in6, fileno)
+DC_FLAGS    := $(COMPAT) -std=gnu++17 -DRTC_STATIC -DRTC_EXPORTS -DRTC_ENABLE_MEDIA=0 -DRTC_ENABLE_WEBSOCKET=0 -DUSE_GNUTLS=0 \
+               -DUSE_MBEDTLS=1 -DUSE_NICE=0 -DRTC_SYSTEM_SRTP=0 -DJUICE_STATIC -I$(DC)/include \
+               -I$(DC)/include/rtc -I$(DC)/src -I$(DC)/deps/plog/include -I$(JUICE)/include -I$(SCTP)
+$(B)/$(SCTP)/%.c.o: $(SCTP)/%.c
+	@mkdir -p $(@D); $(CC) $(ARCH) -O2 -w $(SCTP_FLAGS) -c -o $@ $<
+$(B)/$(JUICE)/%.c.o: $(JUICE)/%.c
+	@mkdir -p $(@D); $(CC) $(ARCH) -O2 -w $(JUICE_FLAGS) -c -o $@ $<
+$(B)/$(DC)/src/%.cpp.o: $(DC)/src/%.cpp
+	@mkdir -p $(@D); $(CXX) $(ARCH) -O2 -w $(DC_FLAGS) -c -o $@ $<
+$(B)/libdatachannel.a: $(RTC_OBJS)
+	rm -f $@; $(AR) rcs $@ $^
+
+# ponytail: newlib no tiene malloc_usable_size (main.c ya da el suyo: js_usable_) ni tm_gmtoff; con tm_isdst (0) la hora
+# local va en UTC. Si el juego necesita la zona horaria de la consola: timeGetCurrentTime + timeToCalendarTimeWithMyRule.
+QJS_NEWLIB := '-Dmalloc_usable_size(p)=0' -Dtm_gmtoff=tm_isdst
+$(B)/libquickjs.a: $(QJS_SRCS)
+	@mkdir -p $(B)/qjs
+	cd $(B)/qjs && $(CC) $(ARCH) -O2 -w -D_GNU_SOURCE $(QJS_NEWLIB) -DCONFIG_VERSION=\"$$(cat $(CURDIR)/$(QJS)/VERSION)\" -c $(addprefix $(CURDIR)/,$(QJS_SRCS))
+	rm -f $@; $(AR) rcs $@ $(B)/qjs/*.o
+
+# El juego, en el romfs del .nro (plat_root() = "romfs:").
+# (también con cada js/** del juego: si no, un romfs viejo o a medias se quedaba sin game/js)
+$(B)/romfs/shim/boot.js: $(wildcard shim/*.js) ../index.html ../version.json $(shell find ../js -name '*.js')
+	bash tools/stage-game.sh $(B)/romfs
+
+clean:
+	rm -rf $(B)
+
+.PHONY: clean

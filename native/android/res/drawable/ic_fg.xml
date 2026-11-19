@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 108 dp con 22 de margen: el dibujo a 64 dp, todo dentro del círculo (CLASSIC incluido). Sin filtrar: pixel art. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android" android:inset="22dp">
+  <bitmap android:src="@mipmap/ic_art" android:filter="false" />
+</inset>

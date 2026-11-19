@@ -1,0 +1,5 @@
+# PokéSurvivor
+User-agent: *
+Allow: /
+
+Sitemap: https://devveda.github.io/pokesurvivor-classic-native/sitemap.xml

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icono adaptativo (Android 8+): sin él, el lanzador mete el icono en un círculo blanco. El dibujo (title/icon0.png, el de
+     «CLASSIC»), entero dentro del círculo que se ve (72 de 108 dp), sobre el azul de su borde. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+  <background android:drawable="@color/ic_bg" />
+  <foreground android:drawable="@drawable/ic_fg" />
+</adaptive-icon>

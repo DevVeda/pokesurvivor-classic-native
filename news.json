@@ -1,0 +1,94 @@
+{
+  "news": [
+    {
+      "v": "1.0.0",
+      "d": "2026-11-19",
+      "title": {
+        "es": "PokéSurvivor Classic 1.0.0",
+        "en": "PokéSurvivor Classic 1.0.0"
+      },
+      "new": [
+        {
+          "es": "Modo Endless: sin Sentencia de Arceus, los enemigos se hacen cada vez más fuertes y tiene su propio ranking.",
+          "en": "Endless mode: no Arceus Judgment, enemies keep getting stronger and it has its own leaderboard."
+        },
+        {
+          "es": "Versiones nativas para escritorio (Windows, macOS y Linux), Steam Deck, PS5 y Switch.",
+          "en": "Native versions for desktop (Windows, macOS and Linux), Steam Deck, PS5 and Switch."
+        },
+        {
+          "es": "Versión para Android: se juega con el dedo (joystick flotante, anclado o fijo, como en el móvil de la web), con mando o con el teclado de la tablet (a la vez que el dedo). Cooperativo local con dos mandos, o con el teclado como jugador 1 y un mando por cada jugador más.",
+          "en": "Android version: play with your finger (floating, anchored or fixed joystick, like on the mobile website), a controller or the tablet keyboard (together with your finger). Couch co-op with two controllers, or with the keyboard as player 1 and one controller per extra player."
+        },
+        {
+          "es": "Cooperativo local: varios jugadores en la misma pantalla, cada uno con su mando.",
+          "en": "Couch co-op: several players on the same screen, each with their own controller."
+        },
+        {
+          "es": "Multijugador → Cooperativo local: cada mando entra pulsando confirmar y elige su Pokémon (los de su perfil de la PS5 o los del jugador 1); el jugador 1 empieza cuando todos están listos.",
+          "en": "Multiplayer → Local co-op: each controller joins by pressing confirm and picks its Pokémon (from its PS5 profile or player 1's); player 1 starts once everyone is ready."
+        },
+        {
+          "es": "Multijugador online.",
+          "en": "Online multiplayer."
+        },
+        {
+          "es": "Importa tu partida de pokesurvivor.com: con la extensión del navegador (Ajustes → Cuenta) o arrastrando su archivo .json a la ventana. Una vez guardada, entra con la misma cuenta en cualquier otra plataforma y sigue donde lo dejaste.",
+          "en": "Import your save from pokesurvivor.com: with the browser extension (Settings → Account) or by dragging its .json file onto the window. Once saved, sign in with the same account on any other platform and pick up where you left off."
+        },
+        {
+          "es": "Entra con Google.",
+          "en": "Sign in with Google."
+        },
+        {
+          "es": "God mode.",
+          "en": "God mode."
+        },
+        {
+          "es": "El juego se actualiza solo.",
+          "en": "The game updates itself."
+        },
+        {
+          "es": "En Windows, macOS y Linux el juego se actualiza solo, también el programa: al volver al menú se reinicia con la versión nueva.",
+          "en": "On Windows, macOS and Linux the game updates itself, the app included: back at the menu it restarts with the new version."
+        }
+      ],
+      "chg": [
+        {
+          "es": "Cartas de nivel en solitario (móvil, tele, PC y consolas): una al lado de otra a toda pantalla y con letra grande.",
+          "en": "Solo level-up cards (phone, TV, PC and consoles): side by side, full screen and with big text."
+        },
+        {
+          "es": "Mejoras de calidad de vida.",
+          "en": "Quality of life improvements."
+        },
+        {
+          "es": "Todos los ataques dicen si son físicos, especiales o buff: cartas, pausa, resumen, Pokédex, tienda, mejoras y vínculos.",
+          "en": "Every move now shows whether it is physical, special or a buff: cards, pause, summary, Pokédex, shop, upgrades and bonds."
+        },
+        {
+          "es": "Quitada la frase amarilla junto al título del menú.",
+          "en": "Removed the yellow tagline next to the menu title."
+        },
+        {
+          "es": "Ajustes → Desarrollador: el God mode sólo lo desbloquea todo; el contador de FPS es una opción aparte, «Mostrar rendimiento».",
+          "en": "Settings → Developer: God mode only unlocks everything; the FPS counter is a separate option, “Show performance”."
+        }
+      ]
+    },
+    {
+      "v": "0.0.0",
+      "d": "2026-11-04",
+      "title": {
+        "es": "El juego clásico",
+        "en": "The classic game"
+      },
+      "chg": [
+        {
+          "es": "PokéSurvivor Classic es una versión antigua del original, tal y como estaba antes de que se volviera de código cerrado.",
+          "en": "PokéSurvivor Classic is an old version of the original, as it was before it went closed source."
+        }
+      ]
+    }
+  ]
+}

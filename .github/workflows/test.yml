@@ -1,0 +1,34 @@
+# Pruebas al crear un tag de versión (v1.0.0…) o a mano (pestaña Actions → test → Run workflow): las mismas que
+# `just test`, el núcleo en C contra el JS y que las fuentes del juego se junten bien (js/app.js). Sin secretos: no hace
+# falta .env ni el SDK de las consolas. (En un repositorio público, gratis.)
+name: test
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Sintaxis del JS
+        run: |
+          for f in $(git ls-files 'js/*.js' 'native/shim/*.js' 'tools/*.mjs'); do node --check "$f"; done
+          node tools/app-js.mjs && node --check js/app.js
+      - name: Arnés de las pantallas
+        run: node native/shim/run-node.cjs 88 ui | tee harness.log | tail -3 && grep -q "errores: 0" harness.log
+      - name: Pruebas de los shims
+        run: |
+          node native/shim/net.test.cjs
+          node native/shim/web.test.cjs
+          node native/shim/updater.test.cjs
+      - name: Núcleo en C contra el JS
+        run: make -C native core-test

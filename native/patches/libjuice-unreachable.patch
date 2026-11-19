@@ -1,0 +1,33 @@
+--- a/deps/libjuice/src/socket.h
++++ b/deps/libjuice/src/socket.h
+@@ -57,6 +57,7 @@
+ #define SENETRESET WSAENETRESET
+ #define SEMSGSIZE WSAEMSGSIZE
+ #define SENETUNREACH WSAENETUNREACH
++#define SEHOSTUNREACH WSAEHOSTUNREACH
+ 
+ #else // assume POSIX
+ 
+@@ -106,6 +107,7 @@
+ #define SENETRESET ENETRESET
+ #define SEMSGSIZE EMSGSIZE
+ #define SENETUNREACH ENETUNREACH
++#define SEHOSTUNREACH EHOSTUNREACH
+ 
+ #endif // _WIN32
+ 
+--- a/deps/libjuice/src/udp.c
++++ b/deps/libjuice/src/udp.c
+@@ -185,7 +185,11 @@
+ 			addr_unmap_inet6_v4mapped((struct sockaddr *)&src->addr, &src->len);
+ 
+ 		} else if (sockerrno == SECONNRESET || sockerrno == SENETRESET ||
+-		           sockerrno == SECONNREFUSED) {
++		           sockerrno == SECONNREFUSED || sockerrno == SEHOSTUNREACH ||
++		           sockerrno == SENETUNREACH) {
++			// (PokeSurvivor) macOS and Linux report an ICMP host/network unreachable (e.g. a STUN server over IPv6
++			// without a route) on the next recvfrom() as EHOSTUNREACH/ENETUNREACH: it is not fatal either.
++			// Without this the whole ICE agent failed at once and remote candidates arriving later were refused.
+ 			// On Windows, if a UDP socket receives an ICMP port unreachable response after
+ 			// sending a datagram, this error is stored, and the next call to recvfrom() returns
+ 			// WSAECONNRESET (port unreachable) or WSAENETRESET (TTL expired).

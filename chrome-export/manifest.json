@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "PokéSurvivor: save to desktop",
+  "version": "1.2",
+  "description": "Downloads your pokesurvivor.com save (toolbar button) or sends it to the desktop game (Settings → Account).",
+  "permissions": ["activeTab", "scripting"],
+  "action": { "default_title": "Download my PokéSurvivor save" },
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [{
+    "matches": ["https://pokesurvivor.com/*"],
+    "js": ["saves.js", "export.js"],
+    "run_at": "document_idle"
+  }]
+}

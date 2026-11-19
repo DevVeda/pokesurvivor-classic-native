@@ -1,0 +1,13 @@
+#!/bin/sh
+# Sólo se publica la rama main (y los tags v*). Las demás (dev, main-web…) son locales: nunca se suben.
+# Borrar una rama remota sí se deja. Se activa una vez con: git config core.hooksPath tools/git-hooks
+# (para saltárselo a propósito: git push --no-verify)
+z=0000000000000000000000000000000000000000
+while read local_ref local_sha remote_ref remote_sha; do
+  [ "$local_sha" = "$z" ] && continue                       # (borrar en el remoto)
+  case "$remote_ref" in
+    refs/heads/main|refs/tags/v*) ;;
+    *) echo "pre-push: no se sube $remote_ref (sólo main y los tags v*)." >&2; exit 1 ;;
+  esac
+done
+exit 0

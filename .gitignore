@@ -1,0 +1,56 @@
+# Vídeos de demostración (pesan mucho; se pueden subir aparte)
+videos/
+
+docs/
+
+# Notas y ajustes de Claude Code (locales: rutas y herramientas de cada uno)
+CLAUDE.md
+.claude/
+
+# Cachés de los scripts de descarga
+tools/cache/
+
+# Informes de la prueba de PS5 (tools/ps5/probe-recv.cjs)
+tools/ps5/probe-report-*.json
+tools/ps5/install/install.elf
+__pycache__/
+
+# Firebase / emulador / logs
+.firebase/
+*-debug.log
+*.log
+node_modules/
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Contactos privados (emails de terceros): nunca al repositorio público
+docs/CONTACTOS_CREADORES.md
+
+# Claves locales (plantilla: env.example)
+.env
+.env.*
+# Generados desde .env por tools/apply-env.mjs
+js/env.js
+firestore.gen.rules
+
+# Caché local de wrangler (Cloudflare) y lo que sube just publish (tools/sign-update.mjs)
+.wrangler/
+dist/
+native/eboot.elf
+native/log.txt
+native/.node-root/
+native/vendor/
+native/third_party/libdatachannel/
+native/build/
+# La web: lo genera tools/app-js.mjs (just web, just web-local) desde las fuentes de js/
+js/app.js
+
+*-adminsdk-*.json
+service-account*.json
+# Keys de la consola (Switch: just switch-nsp): nunca en git
+*.keys
+# Clave de firma del APK de Android (just android): nunca en git
+*.keystore

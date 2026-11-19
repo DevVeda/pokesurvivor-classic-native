@@ -1,0 +1,148 @@
+rules_version = '2';
+// Reglas de Firestore de PokéSurvivor, sacadas de cómo usa cada colección js/app.js.
+// No se sube este: node tools/apply-env.mjs → firestore.gen.rules (el de firebase.json).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    // Cuentas de moderación: ADMIN_UIDS de .env (tools/apply-env.mjs genera firestore.gen.rules).
+    // @step mod/admin
+    function admin() { return signedIn() && me() in __ADMIN_UIDS__; }
+    function onlyKeys(ks) { return request.resource.data.keys().hasOnly(ks); }
+    function str(v, max) { return v is string && v.size() <= max; }
+    // exp: fecha de borrado (política TTL). Opcional (versiones viejas no lo mandan); si va, como mucho `days` días.
+    function expOk(days) {
+      return !('exp' in request.resource.data)
+        || (request.resource.data.exp is timestamp && request.resource.data.exp < request.time + duration.value(days, 'd'));
+    }
+
+    // ---- Partida guardada (db.js). rev sube de 1 en 1, ban sólo lo toca el admin,
+    // y como mucho una subida cada 20 s (el juego espera 21: RULE_GAP).
+    // @step mod/ban
+    // @step cloud/rules data "Reglas saves"
+    // Lee dueño o admin; create rev==1; update rev+1, ban igual, updatedAt==request.time, >20 s desde la
+    // última.
+    // @step cloudpush/rules data "Reglas Firestore"
+    // rev = anterior+1, ban igual, updatedAt==request.time, >20 s.
+    // @next ok "aceptada"
+    // @next denied "rechazada"
+    match /saves/{uid} {
+      allow read: if signedIn() && (me() == uid || admin());
+      allow list: if admin();   // where('ban', '==', true)
+      allow create: if signedIn() && me() == uid
+        && onlyKeys(['save', 'updatedAt', 'v', 'rev'])
+        && request.resource.data.rev == 1
+        && request.resource.data.updatedAt == request.time;
+      allow update: if admin() || (signedIn() && me() == uid
+        && onlyKeys(['save', 'updatedAt', 'v', 'rev', 'ban'])
+        && request.resource.data.rev == resource.data.get('rev', 0) + 1
+        && request.resource.data.get('ban', false) == resource.data.get('ban', false)
+        && request.resource.data.updatedAt == request.time
+        && request.time > resource.data.updatedAt + duration.value(20, 's'));
+      // Una cuenta baneada no puede borrar su guardado.
+      allow delete: if admin() || (signedIn() && me() == uid && !resource.data.get('ban', false));
+    }
+
+    // ---- Perfil público y apodos (social.js)
+    // @step social/pub
+    // Sólo get: el juego nunca lista perfiles ni apodos (listarlos todos costaría una lectura por documento).
+    match /profiles/{uid} {
+      allow get: if signedIn();
+      allow write: if signedIn() && me() == uid
+        && (request.resource == null || str(request.resource.data.name, 16));
+    }
+    // @step social/nick
+    match /names/{lower} {
+      allow get: if signedIn();
+      allow create: if signedIn() && onlyKeys(['uid']) && request.resource.data.uid == me()
+        && lower.matches('^[a-z0-9_ñáéíóú]{3,16}$');
+      allow delete: if signedIn() && resource.data.uid == me();
+    }
+
+    // ---- Amigos: id = uidA_uidB (ordenados)
+    // @step social/req
+    match /friendships/{id} {
+      allow read: if signedIn() && me() in resource.data.users;
+      allow create: if signedIn()
+        && request.resource.data.from == me()
+        && request.resource.data.status == 'pending'
+        && request.resource.data.users.size() == 2
+        && me() in request.resource.data.users
+        && id == request.resource.data.users[0] + '_' + request.resource.data.users[1];
+      // Aceptar: sólo quien la recibe, y sólo cambia status, at y su nombre.
+      allow update: if signedIn() && resource.data.to == me()
+        && request.resource.data.status == 'ok'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'at', 'names']);
+      allow delete: if signedIn() && me() in resource.data.users;
+    }
+
+    // ---- Invitaciones a sala: id = destinatario_remitente
+    // @step social/invite
+    match /inv/{id} {
+      allow read: if signedIn() && (resource.data.to == me() || resource.data.from == me());
+      allow create, update: if signedIn() && request.resource.data.from == me()
+        && id == request.resource.data.to + '_' + me()
+        && onlyKeys(['to', 'from', 'room', 'name', 'at', 'exp']) && expOk(2);
+      allow delete: if signedIn() && (resource.data.to == me() || resource.data.from == me());
+    }
+
+    // ---- Restos de versiones viejas: sólo se borran al eliminar la cuenta.
+    match /runs/{uid} { allow delete: if signedIn() && me() == uid; }
+    match /pres/{uid} { allow delete: if signedIn() && me() == uid; }
+
+    // ---- Ranking: marcas (lb/{tabla}/e/{uids unidos por _}) y resumen del top 50 (lbs/{tabla})
+    // ponytail: el sello (seal) no se comprueba aquí: lo firma el servidor ice con un secreto
+    // que no está en este repo. Sin servidor (ICE_URL vacío) el juego sube la marca sin sello.
+    // TODO(sello): con el Worker, exigirlo y comprobarlo (aquí o en el servidor). Ver native/TODOS.md.
+    // @step rank/rules data "Reglas de marcas"
+    // validEntry: id con uids del que escribe, límites de t/lv/kills/dmg, at=request.time; lbs con
+    // getAfter. No comprueban sello ni ban.
+    function validEntry(e, id) {
+      return e.keys().hasOnly(['uids', 'names', 'dex', 'shiny', 'seal', 't', 'rt', 'lv', 'kills', 'dmg', 'at'])
+        && e.uids is list && e.uids.size() >= 1 && e.uids.size() <= 4
+        && me() in e.uids && id == e.uids.join('_')
+        && e.names is list && e.names.size() == e.uids.size()
+        && e.t is int && e.t >= 1 && e.t <= 86400
+        && e.lv is int && e.lv >= 1 && e.lv <= 10 + e.t / 4
+        && e.kills is int && e.kills >= 0 && e.kills <= 100 + e.t * 12
+        && e.dmg is int && e.dmg >= 0 && (e.t < 1800 ? e.dmg == 0 : e.dmg <= (e.t - 1799) * 50000)
+        && e.at == request.time;
+    }
+    // @step rank/rules
+    // Una marca suelta la lee cualquiera; consultas (listas) sólo con cuenta: sin ella, un script leía todas las marcas.
+    match /lb/{b}/e/{id} {
+      allow get: if true;
+      allow list: if signedIn();
+      allow create, update: if signedIn() && validEntry(request.resource.data, id);
+      allow delete: if admin();
+    }
+    // Borrar la cuenta: todas tus marcas (collectionGroup('e')).
+    match /{path=**}/e/{id} {
+      allow get: if true;
+      allow list: if signedIn();
+      allow delete: if signedIn() && me() in resource.data.uids;
+    }
+    // @step rank/rules
+    match /lbs/{b} {
+      allow get: if true;
+      allow list: if admin();   // purgeAbove
+      allow write: if signedIn()
+        && onlyKeys(['top', 'dtop', 'me', 'ev', 'dev'])
+        && request.resource.data.top is map && request.resource.data.top.size() <= 50
+        && request.resource.data.get('dtop', {}).size() <= 50
+        // Si dice que entra una marca, tiene que ser tuya y estar escrita en esta misma transacción.
+        && (request.resource.data.me == ''
+            || me() in getAfter(/databases/$(database)/documents/lb/$(b)/e/$(request.resource.data.me)).data.uids
+            || admin());
+    }
+
+    // ---- Reportes de marcas: id = tabla__marca__quienReporta
+    // @step rank/report
+    match /reports/{id} {
+      allow create: if signedIn() && request.resource.data.by == me() && id.matches('.*__' + me() + '$')
+        && onlyKeys(['board', 'e', 'names', 't', 'by', 'at', 'exp']) && expOk(31);
+      allow read, delete: if admin();
+    }
+  }
+}

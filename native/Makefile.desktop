@@ -1,0 +1,144 @@
+# PokéSurvivor de escritorio (Mac; Linux igual con sus paquetes): el mismo código que la PS5 con platform/sdl.c.
+#   make -C native -f Makefile.desktop          compila build/desktop/pokesurvivor
+#   make -C native -f Makefile.desktop run      y lo arranca con los archivos del repo (log: build/desktop/data/log.txt)
+#   B=build/linux …                             otra carpeta (la de Linux, en Docker: justfile)
+# Pide: brew install sdl2 openssl@3 curl pkg-config (sin el curl de Homebrew usa la del sistema: sin WebSocket).
+# QuickJS (third_party/quickjs) y libdatachannel (third_party/libdatachannel) se compilan aquí.
+# @step desktop/mk build "Makefile.desktop + sdl.c"
+# El mismo C con platform/sdl.c para las tres.
+# @next macdeps "macOS"
+# @next lnx "Linux"
+# @next win "Windows"
+
+CC  ?= cc
+CXX ?= c++
+B   ?= build/desktop
+PVG := third_party/plutovg
+QJS := third_party/quickjs
+# curl de Homebrew (keg-only): la libcurl del sistema no trae WebSocket (Firebase y las salas del cooperativo).
+# El sistema de destino: el de aquí, o Windows (just windows: MinGW en Docker, TARGET_OS=Windows).
+TARGET_OS ?= $(shell uname -s)
+EXE := $(if $(filter Windows,$(TARGET_OS)),.exe,$(if $(filter Android,$(TARGET_OS)),.so))
+export PKG_CONFIG_PATH := $(shell brew --prefix openssl@3 2>/dev/null)/lib/pkgconfig:$(shell brew --prefix curl 2>/dev/null)/lib/pkgconfig:$(PKG_CONFIG_PATH)
+# (el make 3.81 de macOS no pasa las variables export a $(shell): se le da a mano)
+CURL_CFLAGS := $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config --cflags libcurl 2>/dev/null)
+CURL_LIBS   := $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config --libs libcurl 2>/dev/null || echo -lcurl)
+# just macos: SDL2, curl y OpenSSL propios y estáticos (tools/mac-deps.sh, MAC_DEPS=build/macdeps/<arch>), nada de Homebrew:
+# Homebrew compila para el macOS de este Mac y sólo para su arquitectura. La arquitectura y el macOS mínimo van en CC/CXX.
+ifneq ($(MAC_DEPS),)
+export PKG_CONFIG_LIBDIR := $(abspath $(MAC_DEPS))/lib/pkgconfig
+export PKG_CONFIG_PATH :=
+CURL_CFLAGS := $(shell PKG_CONFIG_LIBDIR=$(PKG_CONFIG_LIBDIR) pkg-config --cflags libcurl) -DCURL_STATICLIB
+endif
+
+SRCS := main.c platform/sdl.c canvas.c gpu.c audio.c tiles_worker.c net.c webrtc.c core_js.c update.c third_party/monocypher/monocypher.c third_party/monocypher/monocypher-ed25519.c \
+        core/world.c core/sim.c core/combat.c core/pickup.c core/abil.c core/foe.c core/map.c core/data.c \
+        $(wildcard $(PVG)/source/*.c)
+QJS_SRCS := $(QJS)/quickjs.c $(QJS)/dtoa.c $(QJS)/libregexp.c $(QJS)/libunicode.c $(QJS)/cutils.c
+
+# Para probar sin empaquetar: la carpeta del juego (plat_root) con enlaces al repo: shim/, vendor/, game/ (= la raíz).
+# Empaquetado (justfile): tools/stage-game.sh, junto al ejecutable.
+ROOT := $(abspath $(B)/root)
+
+CFLAGS := -O2 -Wall -Wno-unused-function -DPS5_DEV -I. -Icore -Ithird_party/monocypher -I$(QJS) -I$(PVG)/include \
+          -Ithird_party/libdatachannel/include -DPLUTOVG_BUILD -DPLUTOVG_BUILD_STATIC $(CURL_CFLAGS) `pkg-config --cflags sdl2`
+# ponytail: webrtc.c envuelve getaddrinfo para la PS5 (--wrap); aquí nadie lo envuelve: __real_* = el del sistema.
+CFLAGS += -D__real_getaddrinfo=getaddrinfo -D__real_freeaddrinfo=freeaddrinfo
+# OpenSSL antes que SDL2: su -L/opt/homebrew/lib llevaría a otra versión de libssl.
+LDADD  := $(B)/libdatachannel.a `pkg-config --libs openssl` $(CURL_LIBS) `pkg-config --libs sdl2` -lm -lpthread
+ifneq ($(MAC_DEPS),)
+LDADD  := $(B)/libdatachannel.a `pkg-config --static --libs libcurl` `pkg-config --static --libs openssl` \
+          `pkg-config --static --libs sdl2` -lm -lpthread
+endif
+ifeq ($(TARGET_OS),Windows)
+# Todo estático en un .exe (SDL2, curl, OpenSSL, libstdc++, winpthread): nada de DLL al lado.
+CFLAGS += -DCURL_STATICLIB -DRTC_STATIC -D_WIN32_WINNT=0x0601
+CURL_LIBS := `pkg-config --static --libs libcurl`
+LDADD  := -static $(B)/libdatachannel.a $(CURL_LIBS) `pkg-config --static --libs openssl` `pkg-config --static --libs sdl2` \
+          -liphlpapi -lws2_32 -lbcrypt -lcrypt32 -lwinmm -lm -lpthread -Wl,--stack,16777216
+# El manifiesto (windows/pokesurvivor.manifest): rutas en UTF-8 para fopen y compañía.
+WINDRES ?= x86_64-w64-mingw32-windres
+OBJS_RES := $(B)/obj/pokesurvivor.res.o
+$(OBJS_RES): windows/pokesurvivor.rc windows/pokesurvivor.manifest
+	@mkdir -p $(@D); cd windows && $(WINDRES) pokesurvivor.rc -O coff -o $(abspath $@)
+endif
+
+ifeq ($(TARGET_OS),Android)
+# Android (just android: NDK en Docker, native/android/Dockerfile; TARGET_OS=Android): libmain.so para SDLActivity (la
+# empaqueta tools/package-android.sh), con platform/android.c además de sdl.c. curl y OpenSSL estáticos; SDL2, su .so.
+SRCS += platform/android.c
+CURL_LIBS := `pkg-config --static --libs libcurl`
+LDADD := -shared -static-libstdc++ -Wl,--no-undefined -Wl,-z,max-page-size=16384 $(B)/libdatachannel.a $(CURL_LIBS) \
+         `pkg-config --static --libs openssl` `pkg-config --libs sdl2` -llog -landroid -lm
+endif
+
+# Cada .c con el compilador de C (el g++ de Linux no respeta -x c) y el enlace con el de C++ (libdatachannel es C++).
+OBJS := $(patsubst %.c,$(B)/obj/%.o,$(SRCS))
+$(B)/obj/%.o: %.c platform.h canvas.h gpu.h audio.h tiles_worker.h net.h webrtc.h core/core.h Makefile.desktop
+	@mkdir -p $(@D); $(CC) $(CFLAGS) -c -o $@ $<
+$(B)/pokesurvivor$(EXE): $(OBJS) $(OBJS_RES) $(B)/libquickjs.a $(B)/libdatachannel.a
+	$(CXX) -o $@ $(OBJS) $(OBJS_RES) $(B)/libquickjs.a $(LDADD)
+
+$(B)/libquickjs.a: $(QJS_SRCS)
+	@[ -f $(QJS)/quickjs.c ] || { echo "Falta $(QJS): make -f Makefile.desktop quickjs-src"; exit 1; }
+	@mkdir -p $(B)/qjs
+	cd $(B)/qjs && $(CC) -O2 -w -D_GNU_SOURCE -DCONFIG_VERSION=\"$$(cat $(CURDIR)/$(QJS)/VERSION)\" -c $(addprefix $(CURDIR)/,$(QJS_SRCS))
+	rm -f $@; $(AR) rcs $@ $(B)/qjs/*.o
+
+# libdatachannel, con las mismas opciones que el Makefile de la PS5 (si cambian allí, aquí también).
+DC    := third_party/libdatachannel
+SCTP  := $(DC)/deps/usrsctp/usrsctplib
+JUICE := $(DC)/deps/libjuice
+RTC_C_SCTP  := $(wildcard $(SCTP)/netinet/*.c $(SCTP)/netinet6/*.c $(SCTP)/user_*.c)
+RTC_C_JUICE := $(filter-out %/server.c,$(wildcard $(JUICE)/src/*.c))
+RTC_CXX     := $(wildcard $(DC)/src/*.cpp $(DC)/src/impl/*.cpp)
+RTC_OBJS    := $(patsubst %,$(B)/%.o,$(RTC_C_SCTP) $(RTC_C_JUICE) $(RTC_CXX))
+SCTP_FLAGS  := -D__Userspace__ -DSCTP_SIMPLE_ALLOCATOR -DSCTP_PROCESS_LEVEL_LOCKS '-DSCTP_STDINT_INCLUDE=<stdint.h>' \
+               -DHAVE_SYS_QUEUE_H -DHAVE_NETINET_IP_ICMP_H -DHAVE_STDATOMIC_H -I$(SCTP)
+# sockaddr con sa_len (BSD y macOS) o sin él (Linux), como en el CMakeLists de usrsctp.
+ifneq ($(filter Linux Android,$(TARGET_OS)),)
+SCTP_FLAGS  += -D_GNU_SOURCE
+else ifeq ($(TARGET_OS),Windows)
+SCTP_FLAGS  := $(filter-out -DHAVE_SYS_QUEUE_H -DHAVE_NETINET_IP_ICMP_H,$(SCTP_FLAGS)) -D_WIN32_WINNT=0x0601
+else
+SCTP_FLAGS  += -DHAVE_SA_LEN -DHAVE_SIN_LEN -DHAVE_SIN6_LEN -DHAVE_SCONN_LEN -DHAVE_NET_ROUTE_H
+endif
+JUICE_FLAGS := -DJUICE_STATIC -DJUICE_EXPORTS -DUSE_NETTLE=0 -DNO_SERVER -DRELEASE=1 -I$(JUICE)/include/juice -I$(JUICE)/include
+DC_FLAGS    := -std=c++17 -DRTC_STATIC -DRTC_EXPORTS -DRTC_ENABLE_MEDIA=0 -DRTC_ENABLE_WEBSOCKET=0 -DUSE_GNUTLS=0 \
+               -DUSE_MBEDTLS=0 -DUSE_NICE=0 -DRTC_SYSTEM_SRTP=0 -DJUICE_STATIC -I$(DC)/include -I$(DC)/include/rtc \
+               -I$(DC)/src -I$(DC)/deps/plog/include -I$(JUICE)/include -I$(SCTP) `pkg-config --cflags openssl`
+ifeq ($(TARGET_OS),Windows)
+JUICE_FLAGS += -D_WIN32_WINNT=0x0601
+DC_FLAGS    += -D_WIN32_WINNT=0x0601
+endif
+$(B)/$(SCTP)/%.c.o: $(SCTP)/%.c
+	@mkdir -p $(@D); $(CC) -O2 -w $(SCTP_FLAGS) -c -o $@ $<
+$(B)/$(JUICE)/%.c.o: $(JUICE)/%.c
+	@mkdir -p $(@D); $(CC) -O2 -w $(JUICE_FLAGS) -c -o $@ $<
+$(B)/$(DC)/src/%.cpp.o: $(DC)/src/%.cpp
+	@mkdir -p $(@D); $(CXX) -O2 -w $(DC_FLAGS) -c -o $@ $<
+$(B)/libdatachannel.a: $(RTC_OBJS)
+	@[ -n "$(RTC_CXX)" ] || { echo "Falta $(DC): make -C native webrtc-src"; exit 1; }
+	rm -f $@; $(AR) rcs $@ $^
+
+$(ROOT):
+	mkdir -p $@
+	ln -sfn $(CURDIR)/shim $@/shim
+	ln -sfn $(CURDIR)/vendor $@/vendor
+	ln -sfn $(CURDIR)/vendor/cacert.pem $@/cacert.pem
+	ln -sfn $(abspath $(CURDIR)/..) $@/game
+
+# @step platforms/run
+run: $(B)/pokesurvivor$(EXE) | $(ROOT)
+	POKESURVIVOR_ROOT=$(ROOT) POKESURVIVOR_DATA=$(abspath $(B)/data) $(B)/pokesurvivor; tail -30 $(B)/data/log.txt
+
+# QuickJS de Bellard, la última versión publicada (el SDK de la PS5 trae una algo posterior; la API pública es la misma).
+QJS_VER := 2025-09-13
+quickjs-src:
+	rm -rf $(QJS) && mkdir -p $(QJS)
+	curl -sSfL https://bellard.org/quickjs/quickjs-$(QJS_VER).tar.xz | tar xJ --strip-components=1 -C $(QJS)
+
+clean:
+	rm -rf $(B)
+
+.PHONY: run quickjs-src clean

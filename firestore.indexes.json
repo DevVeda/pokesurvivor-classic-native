@@ -1,0 +1,16 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "e",
+      "fieldPath": "uids",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "arrayConfig": "CONTAINS", "queryScope": "COLLECTION" },
+        { "arrayConfig": "CONTAINS", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
+    { "collectionGroup": "inv", "fieldPath": "exp", "ttl": true, "indexes": [] },
+    { "collectionGroup": "reports", "fieldPath": "exp", "ttl": true, "indexes": [] }
+  ]
+}

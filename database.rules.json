@@ -1,0 +1,42 @@
+{
+  "rules": {
+    "rooms": {
+      "$room": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $room",
+        "host": { ".validate": "newData.val() === $room" },
+        "open": { ".validate": "newData.isBoolean()" },
+        "at": { ".validate": "newData.isNumber()" },
+        "m": {
+          "$uid": {
+            ".write": "auth != null && (auth.uid === $uid || auth.uid === $room)",
+            ".validate": "newData.child('name').isString() && newData.child('name').val().length <= 24",
+            "name": { ".validate": true },
+            "dex": { ".validate": "newData.isNumber() || (newData.isString() && newData.val().length <= 8)" },
+            "shiny": { ".validate": "newData.isBoolean()" },
+            "at": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
+        "q": {
+          "$to": {
+            "$key": {
+              ".write": "auth != null && (auth.uid === $to || ($key.beginsWith(auth.uid + '_') && root.child('rooms/' + $room + '/m/' + $to).exists()))",
+              ".validate": "newData.isString() && newData.val().length <= 16000 && $key.matches(/^[A-Za-z0-9]+_[0-9][0-9]$/)"
+            }
+          }
+        },
+        "$other": { ".validate": false }
+      }
+    },
+    "rin": {
+      "$room": {
+        ".read": "auth != null",
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.isBoolean() && root.child('rooms/' + $room).exists()"
+        }
+      }
+    }
+  }
+}

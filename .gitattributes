@@ -1,0 +1,3 @@
+# Cada rama de PS5 tiene su título (ps5: PPSA77701 «PokéSurvivor»; ps5-dev: PPSA77702 «PokéSurvivor (Dev)»):
+# un merge entre ellas no lo cambia (necesita una vez: git config merge.ours.driver true).
+native/title/hello/param.json merge=ours

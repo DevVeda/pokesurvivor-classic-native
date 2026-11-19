@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Windows 10 (1903) o más nuevo: las funciones «A» (fopen, mkdir, MoveFileExA…) usan UTF-8. Sin esto, una ruta con
+     acentos (C:\Users\José\…: la partida en AppData, un .json arrastrado a la ventana) no se abría. Lo enlaza Makefile.desktop. -->
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
+    </windowsSettings>
+  </application>
+</assembly>

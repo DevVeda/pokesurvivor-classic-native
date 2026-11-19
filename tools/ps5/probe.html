@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PokéSurvivor — diagnóstico PS5</title>
+<!--
+  Prueba de lo que trae el WebKit de la PS5 para decidir cómo portar el juego.
+  Va en ES5 a propósito: tiene que arrancar aunque el navegador sea antiguo
+  (lo moderno se prueba con new Function). Ver tools/ps5/README.md.
+-->
+<style>
+  body { margin: 0; padding: 16px 24px; background: #111; color: #ddd; font: 16px/1.35 monospace; }
+  h1 { font-size: 22px; margin: 0 0 8px; color: #fc0; }
+  h2 { font-size: 17px; margin: 18px 0 6px; color: #8cf; }
+  table { border-collapse: collapse; }
+  td { padding: 1px 12px 1px 0; vertical-align: top; }
+  .ok { color: #6e6; } .no { color: #f66; } .wait { color: #aaa; }
+  #pad, #keys { white-space: pre; background: #1b1b1b; padding: 8px; min-height: 60px; }
+  #bench { background: #000; display: block; margin-top: 6px; width: 640px; height: 360px; }
+  button { font: inherit; padding: 8px 14px; margin: 4px 6px 4px 0; }
+  button:focus { outline: 3px solid #fc0; }
+  #status { color: #fc0; }
+</style>
+</head>
+<body>
+<h1>PokéSurvivor — diagnóstico PS5</h1>
+<div id="status">Probando…</div>
+<div>
+  <button id="again">Repetir pruebas</button>
+  <button id="rumble">Probar vibración</button>
+  <button id="send">Enviar informe</button>
+  <button id="game">Abrir juego completo (o Options en el mando)</button>
+</div>
+
+<h2>Mando (pulsa botones y mueve sticks)</h2>
+<div id="pad">Sin mando detectado. Pulsa cualquier botón del DualSense.</div>
+<h2>Teclas y ratón que llegan a la página</h2>
+<div id="keys">(nada aún)</div>
+
+<h2>Resultados</h2>
+<table id="out"></table>
+<canvas id="bench" width="1280" height="720"></canvas>
+
+<script>
+(function () {
+  var results = {}, order = [], $out = document.getElementById('out');
+  var $status = document.getElementById('status');
+  var qs = {};
+  location.search.replace(/[?&]([^=&]+)=([^&]*)/g, function (_, k, v) { qs[k] = decodeURIComponent(v); });
+
+  function set(name, ok, info) {
+    if (!(name in results)) order.push(name);
+    results[name] = { ok: ok, info: info === undefined ? '' : String(info) };
+    render();
+  }
+  function render() {
+    var h = '';
+    for (var i = 0; i < order.length; i++) {
+      var r = results[order[i]], cls = r.ok === null ? 'wait' : r.ok ? 'ok' : 'no';
+      h += '<tr><td>' + order[i] + '</td><td class="' + cls + '">' +
+        (r.ok === null ? '…' : r.ok ? 'sí' : 'NO') + '</td><td>' +
+        r.info.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</td></tr>';
+    }
+    $out.innerHTML = h;
+  }
+  function has(name, v) { set(name, !!v); }
+  function syntax(name, src) {
+    try { new Function(src); set('js: ' + name, true); }
+    catch (e) { set('js: ' + name, false, e.message); }
+  }
+  function later(ms, f) { setTimeout(f, ms); }
+  function raf(f) { return window.requestAnimationFrame ? requestAnimationFrame(f) : setTimeout(f, 16); }
+
+  // ---------- entorno ----------
+  function env() {
+    set('userAgent', true, navigator.userAgent);
+    set('pantalla', true, screen.width + 'x' + screen.height + ' ventana ' +
+      innerWidth + 'x' + innerHeight + ' dpr ' + (window.devicePixelRatio || 1));
+    set('origen', true, location.href.slice(0, 120));
+  }
+
+  // ---------- sintaxis que usa app.min.js ----------
+  function js() {
+    syntax('let/const/flecha', 'let a = 1; const f = () => a;');
+    syntax('class', 'class A { constructor() { this.x = 1; } }');
+    syntax('async/await', 'async function f() { await 1; }');
+    syntax('?. y ??', 'var o = {}; return o?.a ?? 1;');
+    syntax('campos de clase', 'class A { x = 1; static y = 2; }');
+    syntax('#privados', 'class A { #x = 1; get() { return this.#x; } }');
+    syntax('BigInt', 'return 1n;');
+    syntax('??= ||=', 'var a; a ??= 1; a ||= 2;');
+    has('js: módulos (type=module)', 'noModule' in document.createElement('script'));
+    has('js: Promise', window.Promise);
+    has('js: structuredClone', window.structuredClone);
+    has('js: Array.prototype.at', [].at);
+    has('js: Object.hasOwn', Object.hasOwn);
+  }
+
+  // ---------- APIs del navegador ----------
+  function apis() {
+    has('fetch', window.fetch);
+    has('WebSocket', window.WebSocket);
+    has('Worker', window.Worker);
+    has('serviceWorker', navigator.serviceWorker);
+    has('caches (Cache API)', window.caches);
+    has('requestAnimationFrame', window.requestAnimationFrame);
+    has('ResizeObserver', window.ResizeObserver);
+    has('IntersectionObserver', window.IntersectionObserver);
+    has('PointerEvent', window.PointerEvent);
+    has('crypto.subtle', window.crypto && crypto.subtle);
+    has('TextEncoder', window.TextEncoder);
+    has('FontFace', window.FontFace);
+    has('OffscreenCanvas', window.OffscreenCanvas);
+    has('Fullscreen API', document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+    has('CSS aspect-ratio', window.CSS && CSS.supports && CSS.supports('aspect-ratio', '1'));
+    has('CSS gap en flex', window.CSS && CSS.supports && CSS.supports('gap', '1px'));
+    has('Gamepad API', navigator.getGamepads);
+    has('AudioContext', window.AudioContext || window.webkitAudioContext);
+
+    try {
+      localStorage.setItem('ps5probe', '1');
+      set('localStorage', localStorage.getItem('ps5probe') === '1');
+      localStorage.removeItem('ps5probe');
+    } catch (e) { set('localStorage', false, e.message); }
+
+    if (!window.indexedDB) set('indexedDB', false);
+    else {
+      set('indexedDB', null);
+      try {
+        var rq = indexedDB.open('ps5probe', 1);
+        rq.onsuccess = function () { set('indexedDB', true); rq.result.close(); };
+        rq.onerror = function () { set('indexedDB', false, rq.error && rq.error.message); };
+      } catch (e) { set('indexedDB', false, e.message); }
+    }
+
+    var c = document.createElement('canvas');
+    set('WebGL', !!(c.getContext('webgl') || c.getContext('experimental-webgl')));
+    set('WebGL2', !!document.createElement('canvas').getContext('webgl2'));
+
+    var img = new Image();
+    img.onload = function () { set('imagen WebP', img.width === 1); };
+    img.onerror = function () { set('imagen WebP', false); };
+    img.src = 'data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==';
+  }
+
+  // ---------- red ----------
+  function net() {
+    if (!window.fetch) return;
+    set('red: pokesurvivor.com/version.json', null);
+    fetch('https://pokesurvivor.com/version.json?_=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { set('red: pokesurvivor.com/version.json', true, j.v); })
+      .catch(function (e) { set('red: pokesurvivor.com/version.json', false, e.message); });
+
+    // Carga el SDK de Firebase igual que js/core/db.js: comprueba la red y que este motor lo entiende.
+    set('Firebase SDK 13 (compat)', null);
+    var s = document.createElement('script');
+    s.src = 'https://www.gstatic.com/firebasejs/13.0.0/firebase-app-compat.js';
+    s.onload = function () { set('Firebase SDK 13 (compat)', !!(window.firebase && firebase.initializeApp)); };
+    s.onerror = function () { set('Firebase SDK 13 (compat)', false, 'no carga'); };
+    document.head.appendChild(s);
+  }
+
+  // ---------- WebRTC (lo que usa el cooperativo, js/net/net.js) ----------
+  function rtc() {
+    var RTC = window.RTCPeerConnection || window.webkitRTCPeerConnection;
+    if (!RTC) { set('WebRTC RTCPeerConnection', false); return; }
+    set('WebRTC RTCPeerConnection', true);
+    var ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+
+    // 1) STUN: ¿sale la IP pública? (sin esto no hay conexión directa por internet)
+    set('WebRTC STUN (candidato srflx)', null);
+    try {
+      var pc = new RTC({ iceServers: ICE }), found = false;
+      pc.createDataChannel('x');
+      pc.onicecandidate = function (e) {
+        if (e.candidate && / typ srflx /.test(e.candidate.candidate)) { found = true; set('WebRTC STUN (candidato srflx)', true); }
+      };
+      pc.createOffer().then(function (o) { return pc.setLocalDescription(o); })
+        .catch(function (e) { set('WebRTC STUN (candidato srflx)', false, e.message); });
+      later(8000, function () { if (!found) set('WebRTC STUN (candidato srflx)', false, 'sin respuesta en 8 s'); pc.close(); });
+    } catch (e) { set('WebRTC STUN (candidato srflx)', false, e.message); }
+
+    // 2) Canal de datos de punta a punta dentro de la página (como anfitrión ↔ invitado)
+    set('WebRTC DataChannel (mensaje ida y vuelta)', null);
+    try {
+      // Sin goteo de candidatos: cada lado espera a reunirlos y los manda en la descripción.
+      var a = new RTC({ iceServers: ICE }), b = new RTC({ iceServers: ICE }), done = false;
+      var gathered = function (pc) {
+        return new Promise(function (ok) {
+          if (pc.iceGatheringState === 'complete') return ok();
+          pc.onicegatheringstatechange = function () { if (pc.iceGatheringState === 'complete') ok(); };
+          later(4000, ok);
+        });
+      };
+      var ch = a.createDataChannel('game', { ordered: false, maxRetransmits: 0 });
+      b.ondatachannel = function (e) { e.channel.onmessage = function (m) { e.channel.send('pong:' + m.data); }; };
+      ch.onopen = function () { ch.send('ping'); };
+      ch.onmessage = function (m) { done = true; set('WebRTC DataChannel (mensaje ida y vuelta)', m.data === 'pong:ping', m.data); };
+      a.createOffer().then(function (o) { return a.setLocalDescription(o); })
+        .then(function () { return gathered(a); })
+        .then(function () { return b.setRemoteDescription(a.localDescription); })
+        .then(function () { return b.createAnswer(); })
+        .then(function (o) { return b.setLocalDescription(o); })
+        .then(function () { return gathered(b); })
+        .then(function () { return a.setRemoteDescription(b.localDescription); })
+        .catch(function (e) { set('WebRTC DataChannel (mensaje ida y vuelta)', false, e.message); });
+      later(15000, function () { if (!done) set('WebRTC DataChannel (mensaje ida y vuelta)', false, 'no abre en 15 s'); a.close(); b.close(); });
+    } catch (e) { set('WebRTC DataChannel (mensaje ida y vuelta)', false, e.message); }
+  }
+
+  // ---------- audio ----------
+  function audio() {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    try {
+      var ac = new AC(), o = ac.createOscillator(), g = ac.createGain();
+      g.gain.value = 0.05; o.connect(g); g.connect(ac.destination);
+      o.start(); o.stop(ac.currentTime + 0.15);
+      set('AudioContext suena', null);
+      later(400, function () { set('AudioContext suena', ac.state === 'running', 'estado ' + ac.state + ' (si "suspended", hace falta pulsar antes)'); });
+    } catch (e) { set('AudioContext suena', false, e.message); }
+  }
+
+  // ---------- rendimiento del canvas 2D (como la partida, js/game.js) ----------
+  function bench(done) {
+    var cv = document.getElementById('bench'), ctx = cv.getContext('2d');
+    var spr = document.createElement('canvas'); spr.width = spr.height = 32;
+    var s = spr.getContext('2d');
+    s.fillStyle = '#e33'; s.beginPath(); s.arc(16, 16, 14, 0, 6.3); s.fill();
+    s.fillStyle = '#fff'; s.fillRect(8, 8, 6, 6);
+    var counts = [300, 1000, 3000], ci = 0;
+
+    function run() {
+      if (ci >= counts.length) { ctx.clearRect(0, 0, cv.width, cv.height); done && done(); return; }
+      var n = counts[ci], frames = 0, t0 = Date.now(), ps = [];
+      for (var i = 0; i < n; i++) ps.push([Math.random() * 1280, Math.random() * 720, Math.random() * 4 - 2, Math.random() * 4 - 2]);
+      set('canvas 2D ' + n + ' sprites', null);
+      (function frame() {
+        ctx.fillStyle = '#204020'; ctx.fillRect(0, 0, 1280, 720);
+        for (var i = 0; i < n; i++) {
+          var p = ps[i]; p[0] = (p[0] + p[2] + 1280) % 1280; p[1] = (p[1] + p[3] + 720) % 720;
+          ctx.globalAlpha = i % 7 ? 1 : 0.6;
+          ctx.drawImage(spr, p[0], p[1], 32, 32);
+        }
+        ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.font = '20px monospace';
+        ctx.fillText(n + ' sprites', 20, 30);
+        frames++;
+        var dt = Date.now() - t0;
+        if (dt < 3000) return raf(frame);
+        var fps = Math.round(frames * 1000 / dt);
+        set('canvas 2D ' + n + ' sprites', fps >= 55, fps + ' fps');
+        ci++; run();
+      })();
+    }
+    run();
+  }
+
+  // ---------- mando en vivo ----------
+  var BT = ['A/✕', 'B/○', 'X/□', 'Y/△', 'L1', 'R1', 'L2', 'R2', 'Share/Create', 'Options', 'L3', 'R3', '↑', '↓', '←', '→', 'PS', 'Touchpad'];
+  var $pad = document.getElementById('pad'), seenPad = false;
+  function padLoop() {
+    var list = navigator.getGamepads ? navigator.getGamepads() : [], txt = '';
+    for (var i = 0; i < list.length; i++) {
+      var p = list[i]; if (!p) continue;
+      if (!seenPad) { seenPad = true; set('mando detectado', true, p.id + ' · mapping "' + p.mapping + '" · ' + p.buttons.length + ' botones · ' + p.axes.length + ' ejes · vibración ' + (p.vibrationActuator ? 'sí' : 'no')); }
+      txt += '#' + i + ' ' + p.id + '\nmapping: "' + p.mapping + '"\nejes: ';
+      for (var a = 0; a < p.axes.length; a++) txt += p.axes[a].toFixed(2) + ' ';
+      txt += '\npulsados: ';
+      for (var b = 0; b < p.buttons.length; b++) if (p.buttons[b].pressed) txt += (BT[b] || b) + '(' + b + ') ';
+      if (p.buttons[9] && p.buttons[9].pressed) openGame();
+      txt += '\n';
+    }
+    if (txt) $pad.textContent = txt;
+    raf(padLoop);
+  }
+  addEventListener('gamepadconnected', function (e) { set('evento gamepadconnected', true, e.gamepad.id); });
+
+  document.getElementById('rumble').onclick = function () {
+    var list = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (var i = 0; i < list.length; i++) {
+      var p = list[i];
+      if (p && p.vibrationActuator) {
+        p.vibrationActuator.playEffect('dual-rumble', { duration: 400, strongMagnitude: 1, weakMagnitude: 1 })
+          .then(function (r) { set('vibración', true, r); }, function (e) { set('vibración', false, e.message); });
+        return;
+      }
+    }
+    set('vibración', false, 'sin vibrationActuator');
+  };
+
+  // ¿El navegador convierte el mando en teclas o en cursor? Se ve aquí.
+  var $keys = document.getElementById('keys'), keyLog = [];
+  function logKey(s) { keyLog.unshift(s); keyLog.length = Math.min(keyLog.length, 8); $keys.textContent = keyLog.join('\n'); }
+  addEventListener('keydown', function (e) { logKey('keydown key="' + e.key + '" code="' + e.code + '" keyCode=' + e.keyCode); }, true);
+  addEventListener('mousedown', function (e) { logKey('mousedown ' + e.clientX + ',' + e.clientY); }, true);
+  addEventListener('touchstart', function () { logKey('touchstart'); }, true);
+
+  // ---------- informe al Mac (tools/ps5/probe-recv.cjs) ----------
+  function send() {
+    var url = qs.report;
+    if (!url) { $status.textContent = 'Sin ?report=http://IP-DEL-MAC:8787 en la URL: copia los resultados a mano o haz foto.'; return; }
+    var body = JSON.stringify({ at: new Date().toISOString(), results: results, keys: keyLog, pad: $pad.textContent });
+    var x = new XMLHttpRequest();
+    x.open('POST', url); x.setRequestHeader('Content-Type', 'text/plain');
+    x.onload = function () { $status.textContent = 'Informe enviado a ' + url; };
+    x.onerror = function () { $status.textContent = 'No se pudo enviar el informe a ' + url; };
+    x.send(body);
+  }
+  document.getElementById('send').onclick = send;
+
+  // El juego compilado va en game/ al lado de esta página (tools/ps5/push.sh).
+  function openGame() { location.href = 'game/index.html'; }
+  document.getElementById('game').onclick = openGame;
+
+  function all() {
+    $status.textContent = 'Probando… (el canvas tarda ~10 s)';
+    env(); js(); apis(); net(); rtc(); audio();
+    bench(function () { $status.textContent = 'Listo. Pulsa "Enviar informe" o haz una foto.'; later(6000, send); });
+  }
+  document.getElementById('again').onclick = all;
+  padLoop();
+  all();
+  document.getElementById('again').focus();
+})();
+</script>
+</body>
+</html>
