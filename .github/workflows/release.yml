@@ -1,0 +1,75 @@
+# Al subir un tag de versión (v1.0.1…): compila Linux (AppImage), Windows (.zip) y Android (.apk) con las mismas recetas
+# que en local (just linux / windows / android, en Docker) y los cuelga en la Release de ese tag. También a mano (Actions →
+# release → Run workflow, eligiendo el tag). Gratis en un repositorio público; tarda bastante (imágenes de Docker).
+#
+# Secretos del repositorio (Settings → Secrets and variables → Actions):
+#   NATIVE_ENV         el .env de las versiones nativas: lo de WEB_ENV más GOOGLE_DESKTOP_* / GOOGLE_TV_* (entrar con
+#                      Google) y UPDATE_PUBLIC_KEY + UPDATE_AUTHOR (autoactualización). NUNCA UPDATE_SIGN_KEY: aquí no hace falta.
+#   ANDROID_KEYSTORE   tu native/android/pokesurvivor.keystore en base64 (base64 -i native/android/pokesurvivor.keystore)
+#   ANDROID_KS_PASS    su contraseña
+# (macOS, Switch y PS5 se compilan en local: README.md.)
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [linux, windows, android]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: just
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq just
+      - name: Servidor (.env del secreto NATIVE_ENV)
+        env:
+          NATIVE_ENV: ${{ secrets.NATIVE_ENV }}
+        run: |
+          test -n "$NATIVE_ENV" || { echo "Falta el secreto NATIVE_ENV"; exit 1; }
+          printf '%s\n' "$NATIVE_ENV" > .env
+          if grep -q '^UPDATE_SIGN_KEY=.' .env; then echo "NATIVE_ENV no debe llevar UPDATE_SIGN_KEY (usa UPDATE_PUBLIC_KEY)"; exit 1; fi
+      - name: Dependencias (SDK de Firebase, QuickJS, libdatachannel)
+        run: just deps
+      - name: Clave de firma de Android
+        if: matrix.target == 'android'
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+        run: |
+          test -n "$ANDROID_KEYSTORE" || { echo "Falta el secreto ANDROID_KEYSTORE (sin él saldría firmado con otra clave)"; exit 1; }
+          printf '%s' "$ANDROID_KEYSTORE" | base64 -d > native/android/pokesurvivor.keystore
+      - name: Compilar
+        env:
+          ANDROID_KS_PASS: ${{ secrets.ANDROID_KS_PASS }}
+        run: just ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            native/build/dist/linux/*.AppImage
+            native/build/dist/windows/*.zip
+            native/build/dist/android/*.apk
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

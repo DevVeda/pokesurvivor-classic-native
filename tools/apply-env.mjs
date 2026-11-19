@@ -43,12 +43,21 @@ if (uids.some(u => !/^[A-Za-z0-9]{20,40}$/.test(u))) { console.error('ADMIN_UIDS
 // @next envjs "sí: update {key,urls}"
 // @next envjs "no: sin autoactualización"
 let update = null;
+const updateUrls = () => {
+  const urls = (list('UPDATE_URLS').length ? list('UPDATE_URLS') : env.LIVE_BASE ? [url('LIVE_BASE') + '/update'] : []).map(u => u.replace(/\/*$/, '/'));
+  if (!urls.length || urls.some(u => !/^https:\/\/[^\s/]+\/\S*$/.test(u))) { console.error('UPDATE_URLS (o LIVE_BASE): URLs https:// separadas por comas'); process.exit(1); }
+  return urls;
+};
+// Sin la privada (la CI de las releases), basta la PÚBLICA: UPDATE_PUBLIC_KEY, la «key» de update en tu js/env.js.
+if (!env.UPDATE_SIGN_KEY && env.UPDATE_PUBLIC_KEY) {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(env.UPDATE_PUBLIC_KEY)) { console.error('UPDATE_PUBLIC_KEY: la clave pública Ed25519 en base64url (43 caracteres)'); process.exit(1); }
+  update = { author: env.UPDATE_AUTHOR || '', key: env.UPDATE_PUBLIC_KEY, urls: updateUrls() };
+}
 if (env.UPDATE_SIGN_KEY) {
   let k;
   try { k = createPrivateKey({ key: Buffer.from(env.UPDATE_SIGN_KEY, 'base64'), format: 'der', type: 'pkcs8' }); } catch {}
   if (!k || k.asymmetricKeyType !== 'ed25519') { console.error('UPDATE_SIGN_KEY no es una clave Ed25519 PKCS8 en base64'); process.exit(1); }
-  const urls = (list('UPDATE_URLS').length ? list('UPDATE_URLS') : env.LIVE_BASE ? [url('LIVE_BASE') + '/update'] : []).map(u => u.replace(/\/*$/, '/'));
-  if (!urls.length || urls.some(u => !/^https:\/\/[^\s/]+\/\S*$/.test(u))) { console.error('UPDATE_URLS (o LIVE_BASE): URLs https:// separadas por comas'); process.exit(1); }
+  const urls = updateUrls();
   // @step publish/haskey
   update = { author: env.UPDATE_AUTHOR || '', key: createPublicKey(k).export({ type: 'spki', format: 'der' }).subarray(12).toString('base64url'), urls };
 }

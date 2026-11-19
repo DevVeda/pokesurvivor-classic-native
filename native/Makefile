@@ -9,8 +9,8 @@ PS5_PAYLOAD_SDK ?= $(HOME)/ps5-payload-dev/opt/ps5-payload-sdk
 LLVM_CONFIG     ?= /opt/homebrew/opt/llvm@18/bin/llvm-config
 export LLVM_CONFIG
 
-# (core-test no necesita el SDK de la PS5: se compila con el cc del sistema; así corre también en la CI)
-ifeq ($(filter-out core-test build/core-test,$(or $(MAKECMDGOALS),eboot.elf)),)
+# (core-test, vendor y webrtc-src no necesitan el SDK de la PS5: se compila con el cc del sistema; así corre también en la CI)
+ifeq ($(filter-out core-test build/core-test vendor webrtc-src,$(or $(MAKECMDGOALS),eboot.elf)),)
 else ifdef PS5_PAYLOAD_SDK
     include $(PS5_PAYLOAD_SDK)/toolchain/prospero.mk
 else
@@ -92,7 +92,7 @@ FIREBASE_SDK := https://www.gstatic.com/firebasejs/13.0.0
 vendor:
 	mkdir -p vendor/firebase
 	for f in app auth firestore database; do curl -sSf -o vendor/firebase/firebase-$$f-compat.js $(FIREBASE_SDK)/firebase-$$f-compat.js || exit 1; done
-	cp /etc/ssl/cert.pem vendor/cacert.pem
+	cp /etc/ssl/cert.pem vendor/cacert.pem 2>/dev/null || cp /etc/ssl/certs/ca-certificates.crt vendor/cacert.pem   # (macOS / Ubuntu)
 	ls -la vendor vendor/firebase
 
 # El código de libdatachannel (WebRTC: el cooperativo, js/net/net.js) y sus dependencias, en las versiones
