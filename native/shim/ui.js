@@ -22,8 +22,14 @@
   // OX: si la pantalla es más ancha que 16:9 (un móvil), lo maquetado va centrado y OX es lo que sobra a cada lado.
   const W = 960, H = 540;
   // OY: si es más estrecha que 16:9 (una ventana del navegador), se escala por el ancho y lo maquetado va centrado en alto.
-  let K, OX, OY;
-  const fit = () => { K = Math.min(ps.H / H, ps.W / W); OX = (ps.W / K - W) / 2; OY = (ps.H / K - H) / 2; };
+  let K, OX, OY, MX, LX;
+  // Menú principal (medidas de la web a 1280x720, por 0,75): el panel de la derecha pegado al borde derecho de verdad y el
+  // logo y el compañero centrados en lo que queda a su izquierda (en un móvil 20:9, más ancho que 16:9). Se rehace con
+  // cada cambio de tamaño (la web en el móvil carga a veces en vertical o con la barra del navegador).
+  const fit = () => {
+    K = Math.min(ps.H / H, ps.W / W); OX = (ps.W / K - W) / 2; OY = (ps.H / K - H) / 2;
+    MX = 694 + OX; LX = Math.round((MX - 19 - OX) / 2);
+  };
   fit();
   // La pantalla cambia de tamaño (la ventana del navegador, shim/web.js): se vuelve a escalar y a pintar todo.
   globalThis.psResize = () => {
@@ -650,6 +656,7 @@
   function barGo(id) {
     if (id === 'sound') { G.Audio.toggleMute(); G.Audio.sfx('select'); return; }
     if (id === 'save') { G.Audio.sfx('select'); cloudSave(); return; }
+    if (id === 'full') { G.Audio.sfx('select'); ps.full(); return; }   // (la web: web.js)
     const go = { news: newsScreen, user: () => goalsScreen(2), support: kofiScreen, logout: logoutScreen }[id];
     if (!go) return;
     G.Audio.sfx('select'); if (top) close(); go();
@@ -684,13 +691,14 @@
         if (newsUnseen()) { ctx.fillStyle = C.red; ctx.fillRect(x + 22, 12, 6, 6); }
       }],
       [() => 30, x => { btn(x, 10, 30, 26, null, 'ghost', focus === 'sound'); icon(G.Audio.settings.muted ? 'mute' : 'sound', x + 6, 14, 18); if (focus === 'sound') ring(x, 10, 30, 26, 7); }],
+      ...(fullOk() ? [[() => 30, x => { btn(x, 10, 30, 26, null, 'ghost', focus === 'full'); icon('full', x + 6, 14, 18); if (focus === 'full') ring(x, 10, 30, 26, 7); }]] : []),
       ...(barList().includes('logout') ? [[() => { font(11, true); return ctx.measureText(T('Salir')).width + 22; }, (x, w) => {
         btn(x, 10, w, 26, T('Salir'), 'ghost', focus === 'logout', 11);
         if (focus === 'logout') ring(x, 10, w, 26, 7);
       }]] : []),
     ];
     // Lo que hace cada uno con un clic, desde cualquier pantalla (ratón): como ✕ en la barra del menú (barGo).
-    const ids = [null, null, 'user', ...(barList().includes('save') ? ['save'] : []), 'news', 'sound', ...(barList().includes('logout') ? ['logout'] : [])];
+    const ids = [null, null, 'user', ...(barList().includes('save') ? ['save'] : []), 'news', 'sound', ...(fullOk() ? ['full'] : []), ...(barList().includes('logout') ? ['logout'] : [])];
     let x = W + OX - 16;   // pegada a la derecha, como la web (el de «Mostrar rendimiento» va encima, en su capa)
     for (let i = items.length - 1; i >= 0; i--) {
       const w = items[i][0](); x -= w; items[i][1](x, w);
@@ -5239,7 +5247,8 @@
   }
 
   // Medidas de la web a 1280x720, por 0,75.
-  const MX = 694 + OX, MY = 48, MW = 247, LX = 338;   // (OX: en pantalla ancha, el panel pegado a la derecha de verdad)
+  // (MX y LX, en fit(): cambian con el tamaño de la pantalla)
+  const MY = 48, MW = 247;
   const hms = ms => { const t = Math.floor(ms / 1000); return [Math.floor(t / 3600) % 24, Math.floor(t / 60) % 60, t % 60].map(v => String(v).padStart(2, '0')).join(':'); };
   const hwLeft = ms => { const d = Math.floor(ms / 864e5); return d ? G.I18n.f('{x} d {x}', d, hms(ms)) : hms(ms); };
   function hwText() {
@@ -5249,10 +5258,11 @@
   }   // panel del menú; centro de la columna izquierda
   // La barra de arriba, de izquierda a derecha (como #topbar): Guardar y Salir sólo con la cuenta en la nube (con la
   // de la consola, salir sería volver a entrar en la misma); Apoyar si hay Ko-fi.
+  const fullOk = () => !!(ps.fullOk && ps.fullOk());   // pantalla completa: sólo la web (web.js)
   function barList() {
     const cloud = G.DB.mode === 'cloud';
     return [...(G.Funding && G.Funding.url ? ['support'] : []),
-      'user', ...(cloud && !G.DB.guest ? ['save'] : []), 'news', 'sound', ...(cloud ? ['logout'] : [])];
+      'user', ...(cloud && !G.DB.guest ? ['save'] : []), 'news', 'sound', ...(fullOk() ? ['full'] : []), ...(cloud ? ['logout'] : [])];
   }
 
   // QR centrado en cx, de QS px como mucho: blanco con 4 módulos de margen, como pide el estándar.

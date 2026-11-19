@@ -44,7 +44,24 @@ Copia `env.example` a `.env` y rellénalo con los datos de tu servidor (nunca su
 | `just check` | Compila todas las plataformas y pasa las pruebas |
 
 Las versiones de consola son homebrew: necesitan una consola preparada para ello. Este repositorio **no
-incluye** claves, firmware ni nada de Sony o Nintendo.
+incluye** claves, firmware ni nada de Sony o Nintendo: cada uno pone lo suyo (abajo) y nada de eso se sube a git.
+
+### Qué necesita cada plataforma
+
+Para todas: `.env` (desde `env.example`) y, una vez, `just deps` (baja el SDK de Firebase, QuickJS y libdatachannel).
+
+| Plataforma | Qué hace falta | Dónde va |
+|---|---|---|
+| Web | Nada más | — |
+| macOS | `brew install sdl2 openssl@3 curl` | — |
+| Linux, Windows | Docker (se compilan en contenedores) | — |
+| Android | Docker. Una clave de firma: la primera vez se crea sola | `native/android/pokesurvivor.keystore`, con la contraseña de `ANDROID_KS_PASS` (sin ella, `pokesurvivor`). **Guárdala**: con otra clave, el APK no se instala encima del anterior |
+| Switch (`.nro`) | Docker (devkitPro va en la imagen) | — |
+| Switch (`.nsp`, `just switch-nsp`) | Las `prod.keys` **de tu consola** (se sacan con Lockpick_RCM) | `native/switch/prod.keys` (o `just switch-nsp keys=<ruta>`) |
+| PS5 (título, `just ps5`) | [PS5_Vulkan](https://github.com/mihawk-99/PS5_Vulkan) clonado y compilado (su `tools/bootstrap`), y Docker | `../ps5gpu/PS5_Vulkan`, al lado de este repositorio (o la ruta en `PS5GPU`). El título sale en `../ps5gpu/poke-title/dist` y empaquetado en `native/build/dist/ps5/PokeSurvivor-<versión>-ps5.zip` (se descomprime en `/data/homebrew/`); `just ps5 <IP>` lo sube por FTP (puerto 2121) con el juego cerrado en la consola |
+| PS5 (payload, `just payload <IP>`) | El SDK de [ps5-payload-dev](https://github.com/ps5-payload-dev) y LLVM 18 (`brew install llvm@18`) | `~/ps5-payload-dev/opt/ps5-payload-sdk` (o `PS5_PAYLOAD_SDK`) |
+
+Lo que es tuyo y privado (`.env`, `*.keys`, `*.keystore`) ya está en `.gitignore`.
 
 ## Controles
 

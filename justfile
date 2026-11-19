@@ -135,7 +135,7 @@ run: _env
 # @next so
 android: _env
     docker image inspect pokesurvivor-android > /dev/null 2>&1 || docker build --platform linux/amd64 -t pokesurvivor-android native/android
-    docker run --rm --platform linux/amd64 -v "$PWD":/src -w /src pokesurvivor-android bash native/tools/package-android.sh
+    docker run --rm --platform linux/amd64 -e ANDROID_KS_PASS -v "$PWD":/src -w /src pokesurvivor-android bash native/tools/package-android.sh
 
 # Instalarlo en el móvil (USB con depuración, o el emulador) y abrirlo
 # @step android/run platform "adb install/run"
@@ -186,28 +186,25 @@ switch-nsp keys="native/switch/prod.keys": switch
 
 # ---------------- PS5 ----------------
 
-# Título «PokéSurvivor Classic Native» (PPSA77702) → ../ps5gpu/poke-title/dist; con IP, además se sube a la consola
-# (el juego CERRADO en ella)
+# Título «PokéSurvivor Classic Native» (PPSA77702) → ../ps5gpu/poke-title/dist, con todo el juego dentro (sprites
+# incluidos: stage-game.sh); con IP, además se sube entero a la consola (el juego CERRADO en ella; ~13 600 archivos)
 # @step platforms/ps5 platform "PS5 título + FTP"
 # just ps5 [ip] → título y, con IP, subida por FTP.
 # @sub ps5
 # @next stage
 # @step ps5/ipq decision "¿Se pasó IP?"
-# Sin IP sólo compila; con IP push-title.sh (FAST=1).
+# Sin IP sólo compila; con IP push-title.sh (todo).
 # @next push "sí"
 ps5 ip="": _ps5-title
-    {{ if ip == "" { "true" } else { "FAST=1 PS5_PORT=" + ps5_port + " PS5GPU='" + ps5gpu + "' native/title/push-title.sh " + ip } }}
+    {{ if ip == "" { "true" } else { "PS5_PORT=" + ps5_port + " PS5GPU='" + ps5gpu + "' native/title/push-title.sh " + ip } }}
 
-# Subir el título ya compilado (sin Docker: vale para cambios sólo de JS/shims)
+# Desarrollo: subir el título ya compilado sin los sprites (FAST=1, sin Docker), cuando la consola ya los tiene y sólo
+# cambian JS o shims
 # @step ps5/jsonly build "ps5-push"
-# Cambio sólo de JS/shims: sube el título ya compilado, sin Docker.
+# Cambio sólo de JS/shims: sube el título ya compilado, sin Docker ni sprites.
 # @next push
 ps5-push ip:
     FAST=1 PS5_PORT={{ps5_port}} PS5GPU="{{ps5gpu}}" native/title/push-title.sh {{ip}}
-
-# Subirlo todo, sprites incluidos (la primera vez en una consola: ~13 600 archivos)
-ps5-sprites ip:
-    PS5_PORT={{ps5_port}} PS5GPU="{{ps5gpu}}" native/title/push-title.sh {{ip}}
 
 # El log del título en la consola
 ps5-log ip:
@@ -227,6 +224,18 @@ payload-log ip:
 _ps5-title: _env
     docker image inspect ps5title > /dev/null 2>&1 || docker build --platform linux/amd64 -t ps5title native/title
     docker run --rm --platform linux/amd64 -v "{{ps5gpu}}":/work -v "$PWD":/src ps5title bash /src/native/title/build-title.sh
+    @just _ps5-zip
+
+# El título, también en native/build/dist/ps5/PokeSurvivor-<VERSION>-ps5.zip (la carpeta <titleId>, con todo el juego
+# dentro), como los paquetes de las demás plataformas: se descomprime en /data/homebrew/ de la consola.
+_ps5-zip:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    id=$(grep -o '"titleId": *"[A-Z0-9]*"' native/title/hello/param.json | grep -o 'PPSA[0-9]*')
+    out="$PWD/native/build/dist/ps5" zip="PokeSurvivor-$(cat VERSION)-ps5.zip"
+    mkdir -p "$out" && rm -f "$out/$zip"
+    (cd "{{ps5gpu}}/poke-title/dist" && zip -qr "$out/$zip" "$id")
+    ls -lh "$out/$zip"
 
 # ---------------- pruebas y herramientas ----------------
 

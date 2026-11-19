@@ -47,6 +47,21 @@
   const coarse = matchMedia('(pointer: coarse)').matches;
   ps.CAN = { page: true, browser: true, keyboard: !coarse, touch: coarse, sysKeyboard: false, filePicker: false, extension: false,
              resolution: false, relaunch: false, consoleAccount: false, padApplet: false };
+  // Pantalla completa (el botón de la barra de arriba de ui.js, como el #btn-full de la web vieja). En el móvil, además se
+  // intenta fijar en horizontal. iPhone: Safari no deja; abriéndolo desde «Añadir a pantalla de inicio», sí (el aviso).
+  const canFull = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = () => !!navigator.standalone || matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches;
+  ps.fullOk = () => canFull() || (isIOS && !standalone());
+  ps.full = () => {
+    if (!canFull()) {
+      if (window.G) G.UI.toast(G.T('En iPhone, Safari no deja poner las webs a pantalla completa. Pulsa Compartir y luego "Añadir a pantalla de inicio": abriendo el juego desde ese icono se juega a pantalla completa.'), 9000);
+      return;
+    }
+    if (document.fullscreenElement || document.webkitFullscreenElement) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+    const el = document.documentElement, p = (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+    if (p && p.then) p.then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* nada */ } }).catch(() => {});
+  };
   // La web es la del servidor: la cuenta online siempre (sin conexión = invitado, Cloud.set de ui.js).
   window.psCloudOn = true;
 
