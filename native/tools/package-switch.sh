@@ -33,9 +33,9 @@ trap 'rm -rf "$W" "$K"' EXIT
 grep -iE '^[[:space:]]*(header_key|key_area_key_application_[0-9a-f]{2})[[:space:]]*=' "$KEYS" | tr -d '\r' > "$K" || true
 [[ -s $K ]] || { echo "$KEYS no tiene header_key ni key_area_key_application_xx" >&2; exit 1; }
 # @step switch/nsp build "hacbrewpack → NSP"
-# elf2nso + npdm + nacp → PokeSurvivor-<VER>-<BUILD>.nsp.
+# elf2nso + npdm + nacp → PokeSurvivor-Classic-Native-<VER>-<BUILD>.nsp.
 (cd "$W" && hacbrewpack -k "$K" --titleid $TID --exefsdir exefs --romfsdir "$B/romfs" --controldir control --nologo \
     --nspdir "$OUT" --ncadir nca --tempdir tmp --backupdir backup) | grep -v "^Writing "   # (una línea por archivo del romfs)
 rm -f "$OUT"/PokeSurvivor-*.nsp   # (los de otros builds)
-mv "$OUT/$TID.nsp" "$OUT/PokeSurvivor-$SLUG.nsp"
-echo "NSP: $OUT/PokeSurvivor-$SLUG.nsp ($(du -h "$OUT/PokeSurvivor-$SLUG.nsp" | cut -f1))"
+mv "$OUT/$TID.nsp" "$OUT/PokeSurvivor-Classic-Native-$SLUG.nsp"
+echo "NSP: $OUT/PokeSurvivor-Classic-Native-$SLUG.nsp ($(du -h "$OUT/PokeSurvivor-Classic-Native-$SLUG.nsp" | cut -f1))"

@@ -2,7 +2,7 @@
 # PokéSurvivor.app para macOS (just macos): el binario de Makefile.desktop y el juego (tools/stage-game.sh) en Resources.
 # Universal: Apple Silicon (macOS 11+) e Intel (macOS 10.15+), cada uno con SDL2, curl y OpenSSL estáticos compilados para
 # ese mínimo (tools/mac-deps.sh); nada de Homebrew dentro (sus librerías piden el macOS de este Mac).
-#   native/tools/package-macos.sh      → native/build/dist/macos/PokeSurvivor.app y PokeSurvivor-<VERSION>-<BUILD>-macos.zip
+#   native/tools/package-macos.sh      → native/build/dist/macos/PokeSurvivor.app y PokeSurvivor-Classic-Native-<VERSION>-<BUILD>-macos.zip
 # @step desktop/macdeps build "Deps estáticas Mac"
 # mac-deps.sh compila SDL2/curl/OpenSSL estáticos por arquitectura.
 # @next lipo
@@ -63,5 +63,5 @@ iconutil -c icns "$ICO" -o "$C/Resources/PokeSurvivor.icns" && rm -rf "$ICO"
 # @next dist
 codesign --force --deep -s - "$APP" 2> /dev/null || echo "Aviso: sin firma ad hoc (codesign)."
 # @step desktop/macpkg
-(cd "$N/build/dist/macos" && rm -f PokeSurvivor-*-macos.zip && ditto -c -k --keepParent PokeSurvivor.app "PokeSurvivor-${SLUG:-0.0.0}-macos.zip")
+(cd "$N/build/dist/macos" && rm -f PokeSurvivor-*-macos.zip && ditto -c -k --keepParent PokeSurvivor.app "PokeSurvivor-Classic-Native-${SLUG:-0.0.0}-macos.zip")
 echo "Hecho: $APP ($(du -sh "$APP" | cut -f1); $(lipo -archs "$C/MacOS/PokeSurvivor"), macOS $MIN_X86+ Intel / $MIN_ARM+ Apple Silicon)"

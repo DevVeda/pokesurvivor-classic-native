@@ -2,7 +2,7 @@
 # Windows x86_64 (just windows), DENTRO del contenedor de native/windows/Dockerfile (MinGW-w64):
 #   docker run --rm --platform linux/amd64 -v "$PWD":/src -w /src pokesurvivor-windows bash native/tools/package-windows.sh
 # → native/build/dist/windows/PokeSurvivor/ (PokeSurvivor.exe, un solo ejecutable estático, y el juego al lado: plat_root)
-#   y native/build/dist/windows/PokeSurvivor-<VERSION>-<BUILD>-windows-x64.zip (la versión: el archivo VERSION de la raíz)
+#   y native/build/dist/windows/PokeSurvivor-Classic-Native-<VERSION>-<BUILD>-windows-x64.zip (la versión: el archivo VERSION de la raíz)
 set -euo pipefail
 N=$(cd "$(dirname "$0")/.." && pwd)
 VER=$(tr -d ' \r\n' < "$N/../VERSION")
@@ -17,5 +17,5 @@ bash "$N/tools/stage-game.sh" "$D"
 # @step desktop/win build "MinGW .exe"
 # PokeSurvivor.exe estático, stage-game al lado y zip.
 # @next dist
-(cd "$OUT" && rm -f PokeSurvivor-*-windows-x64.zip && zip -qr "PokeSurvivor-$SLUG-windows-x64.zip" PokeSurvivor)
+(cd "$OUT" && rm -f PokeSurvivor-*-windows-x64.zip && zip -qr "PokeSurvivor-Classic-Native-$SLUG-windows-x64.zip" PokeSurvivor)
 ls -la "$OUT"

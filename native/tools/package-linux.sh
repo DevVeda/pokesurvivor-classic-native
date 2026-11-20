@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Linux x86_64 y la AppImage (Steam Deck), DENTRO del contenedor de native/linux/Dockerfile (just linux):
 #   docker run --rm --platform linux/amd64 -v "$PWD":/src -w /src pokesurvivor-linux bash native/tools/package-linux.sh
-# → native/build/dist/linux/pokesurvivor/ (carpeta: bin/ y share/pokesurvivor/) y native/build/dist/linux/PokeSurvivor-<VERSION>-x86_64.AppImage
+# → native/build/dist/linux/pokesurvivor/ (carpeta: bin/ y share/pokesurvivor/) y native/build/dist/linux/PokeSurvivor-Classic-Native-<VERSION>-x86_64.AppImage
 set -euo pipefail
 N=$(cd "$(dirname "$0")/.." && pwd) S=$(cd "$N/.." && pwd)
 VER=$(tr -d ' \r\n' < "$S/VERSION")   # (la versión: el archivo VERSION de la raíz)
@@ -25,9 +25,9 @@ cp -a "$D" "$OUT/pokesurvivor"   # (la carpeta tal cual, sin AppImage)
 # make con gcc, stage-game en AppDir.
 # @next appimg
 # @step desktop/appimg build "AppImage"
-# linuxdeploy mete las librerías y genera PokeSurvivor-<VER>-<BUILD>-x86_64.AppImage.
+# linuxdeploy mete las librerías y genera PokeSurvivor-Classic-Native-<VER>-<BUILD>-x86_64.AppImage.
 # @next dist
 cd "$OUT" && linuxdeploy --appdir "$D" -d pokesurvivor.desktop -i pokesurvivor.png --output appimage
 rm -f "$OUT"/PokeSurvivor-*-x86_64.AppImage   # (los de otros builds)
-mv "$OUT"/PokéSurvivor*.AppImage "$OUT/PokeSurvivor-$SLUG-x86_64.AppImage" 2> /dev/null || true
+mv "$OUT"/PokéSurvivor*.AppImage "$OUT/PokeSurvivor-Classic-Native-$SLUG-x86_64.AppImage" 2> /dev/null || true
 ls -la "$OUT"

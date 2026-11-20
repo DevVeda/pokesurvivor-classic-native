@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Android (arm64-v8a, Android 7+), DENTRO del contenedor de native/android/Dockerfile (just android):
 #   docker run --rm --platform linux/amd64 -v "$PWD":/src -w /src pokesurvivor-android bash native/tools/package-android.sh
-# → native/build/dist/android/PokeSurvivor-<VERSION>-<BUILD>.apk. Sin Gradle: javac + d8 (clases), aapt2 (manifiesto e icono),
+# → native/build/dist/android/PokeSurvivor-Classic-Native-<VERSION>-<BUILD>.apk. Sin Gradle: javac + d8 (clases), aapt2 (manifiesto e icono),
 # zip (libmain.so, libSDL2.so y el juego en assets/ps/), zipalign y apksigner.
 # Firma: ANDROID_KEYSTORE (y ANDROID_KS_PASS) o native/android/pokesurvivor.keystore, que se crea la primera vez y NUNCA va
 # a git (.gitignore): con otra clave, Android no deja instalar el APK nuevo encima del viejo (hay que desinstalar).
@@ -46,6 +46,6 @@ KS=${ANDROID_KEYSTORE:-$N/android/pokesurvivor.keystore} PASS=${ANDROID_KS_PASS:
                         -storepass "$PASS" -keypass "$PASS" -dname "CN=PokeSurvivor" > /dev/null
 # @step android/sign
 rm -f "$OUT"/PokeSurvivor-*.apk   # (los de otros builds)
-apksigner sign --v4-signing-enabled false --ks "$KS" --ks-pass "pass:$PASS" --out "$OUT/PokeSurvivor-$SLUG.apk" "$A/aligned.apk"
+apksigner sign --v4-signing-enabled false --ks "$KS" --ks-pass "pass:$PASS" --out "$OUT/PokeSurvivor-Classic-Native-$SLUG.apk" "$A/aligned.apk"
 rm -f "$A"/*.apk   # (base y aligned: intermedios sin firmar; el que se instala es el de $OUT)
 ls -la "$OUT"

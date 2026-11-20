@@ -58,10 +58,11 @@ CFLAGS += -DCURL_STATICLIB -DRTC_STATIC -D_WIN32_WINNT=0x0601
 CURL_LIBS := `pkg-config --static --libs libcurl`
 LDADD  := -static $(B)/libdatachannel.a $(CURL_LIBS) `pkg-config --static --libs openssl` `pkg-config --static --libs sdl2` \
           -liphlpapi -lws2_32 -lbcrypt -lcrypt32 -lwinmm -lm -lpthread -Wl,--stack,16777216
-# El manifiesto (windows/pokesurvivor.manifest): rutas en UTF-8 para fopen y compañía.
+# El manifiesto (windows/pokesurvivor.manifest): rutas en UTF-8 para fopen y compañía. El icono (pokesurvivor.ico, el de
+# «CLASSIC», native/title/icon0.png): el del .exe en el Explorador y, con SDL (ExtractIcon), el de la ventana y la barra.
 WINDRES ?= x86_64-w64-mingw32-windres
 OBJS_RES := $(B)/obj/pokesurvivor.res.o
-$(OBJS_RES): windows/pokesurvivor.rc windows/pokesurvivor.manifest
+$(OBJS_RES): windows/pokesurvivor.rc windows/pokesurvivor.manifest windows/pokesurvivor.ico
 	@mkdir -p $(@D); cd windows && $(WINDRES) pokesurvivor.rc -O coff -o $(abspath $@)
 endif
 
