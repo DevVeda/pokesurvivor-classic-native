@@ -95,8 +95,10 @@ emit(void *ptr, int kind, int id, int id2, const char *a, size_t alen, const cha
 // se repite con lo justo y, para una IPv4 escrita (o ninguna), se rellena a mano. Un solo bloque (addrinfo +
 // sockaddr_in) que suelta __wrap_freeaddrinfo (el freeaddrinfo de la PS5 no es el de FreeBSD: con un bloque
 // que no es suyo, «heap error» y señal 6). La PS5 no acepta el puerto "0" (EAI_SERVICE).
+#ifndef __real_getaddrinfo   // (escritorio: es el del sistema, Makefile.desktop; declararlo otra vez avisa en Windows)
 int __real_getaddrinfo(const char*, const char*, const struct addrinfo*, struct addrinfo**);
 void __real_freeaddrinfo(struct addrinfo*);
+#endif
 
 #define MINE_MAX 64   // ponytail: bloques propios vivos a la vez; libjuice suelta cada uno al momento
 static struct addrinfo *mine[MINE_MAX];

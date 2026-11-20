@@ -12,6 +12,9 @@
 #ifdef _WIN32
 #include <windows.h>                // (GetSystemMetrics: plat_has_keyboard)
 #include <process.h>                // (execv)
+#ifndef SM_CONVERTIBLESLATEMODE     // (MinGW sólo la define desde Windows 8, _WIN32_WINNT 0x0602; pedimos 0x0601)
+#define SM_CONVERTIBLESLATEMODE 0x2003
+#endif
 #define mkdir(p, mode) mkdir(p)     // (el de Windows no lleva permisos)
 #endif
 #include <string.h>

@@ -131,6 +131,6 @@ CORE := core/world.c core/sim.c core/combat.c core/pickup.c core/abil.c core/foe
 core-test: build/core-test
 	node core/bench-world.cjs && node core/bench-sim.cjs && node core/bench-combat.cjs && node core/bench-pickup.cjs && node core/bench-abil.cjs && node core/bench-foe.cjs && node core/bench-map.cjs
 build/core-test: core/test.c $(CORE) core/core.h
-	mkdir -p build && cc -std=c17 -O2 -Wall -Wextra -o $@ core/test.c $(CORE) -lm
+	mkdir -p build && cc -std=c17 -O2 -ffp-contract=off -Wall -Wextra -o $@ core/test.c $(CORE) -lm
 
 .PHONY: push sprites mesa log clean core-test

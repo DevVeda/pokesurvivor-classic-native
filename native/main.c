@@ -40,8 +40,8 @@
 #ifdef PS5_TITLE
 int backtrace(void **buf, int n);   // la de libps5platform (--defsym backtrace=ps5_backtrace en build-title.sh)
 #elif defined(_WIN32) || defined(__SWITCH__) || defined(__ANDROID__)   // (Android: execinfo.h desde la API 33)
-#define backtrace(b, n) 0           // ponytail: sin pila al cerrarse en Windows (sólo diagnóstico)
-#define backtrace_symbols_fd(b, n, fd) ((void)0)
+#define backtrace(b, n) ((void)(b), 0)   // ponytail: sin pila al cerrarse en Windows (sólo diagnóstico)
+#define backtrace_symbols_fd(b, n, fd) ((void)(b), (void)(n))
 #else
 #include <execinfo.h>
 #endif

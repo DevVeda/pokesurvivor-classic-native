@@ -4,7 +4,10 @@
  */
 #ifndef CORE_H
 #define CORE_H
-#pragma STDC FP_CONTRACT OFF   /* sin a*b+c fundidos (FMA): igual que el JS, bit a bit */
+/* Sin a*b+c fundidos (FMA): igual que el JS, bit a bit. GCC no entiende el pragma: -ffp-contract=off en los Makefile. */
+#ifdef __clang__
+#pragma STDC FP_CONTRACT OFF
+#endif
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>

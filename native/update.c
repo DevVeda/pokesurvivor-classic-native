@@ -501,7 +501,7 @@ one(job_t *j, char *err, size_t en) {
   if(j->off >= 0) return from_pack(j, err, en);
   snprintf(tmp, sizeof tmp, "%s.part", j->dest);
   mkparents(j->dest);
-  if(!(s.f = fopen(tmp, "wb"))) { snprintf(err, en, "no se puede escribir %s", tmp); return -1; }
+  if(!(s.f = fopen(tmp, "wb"))) { snprintf(err, en, "no se puede escribir %.250s", tmp); return -1; }
   s.max = (size_t)j->size;
   crypto_sha512_init(&s.sha);
   int rc = fetch(j->url, &s, err, en);

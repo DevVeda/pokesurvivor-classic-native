@@ -42,7 +42,7 @@ QJS_SRCS := $(QJS)/quickjs.c $(QJS)/dtoa.c $(QJS)/libregexp.c $(QJS)/libunicode.
 # Empaquetado (justfile): tools/stage-game.sh, junto al ejecutable.
 ROOT := $(abspath $(B)/root)
 
-CFLAGS := -O2 -Wall -Wno-unused-function -DPS5_DEV -I. -Icore -Ithird_party/monocypher -I$(QJS) -I$(PVG)/include \
+CFLAGS := -O2 -ffp-contract=off -Wall -Wno-unused-function -DPS5_DEV -I. -Icore -Ithird_party/monocypher -I$(QJS) -I$(PVG)/include \
           -Ithird_party/libdatachannel/include -DPLUTOVG_BUILD -DPLUTOVG_BUILD_STATIC $(CURL_CFLAGS) `pkg-config --cflags sdl2`
 # ponytail: webrtc.c envuelve getaddrinfo para la PS5 (--wrap); aquí nadie lo envuelve: __real_* = el del sistema.
 CFLAGS += -D__real_getaddrinfo=getaddrinfo -D__real_freeaddrinfo=freeaddrinfo
