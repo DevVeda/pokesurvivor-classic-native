@@ -39,6 +39,10 @@ jobs:
           test -n "$NATIVE_ENV" || { echo "Falta el secreto NATIVE_ENV"; exit 1; }
           printf '%s\n' "$NATIVE_ENV" > .env
           if grep -q '^UPDATE_SIGN_KEY=.' .env; then echo "NATIVE_ENV no debe llevar UPDATE_SIGN_KEY (usa UPDATE_PUBLIC_KEY)"; exit 1; fi
+          # Sin estos, el build sale con «Entrar con Google» en gris y sin autoactualización (pasó en la 1.0.3).
+          for k in GOOGLE_DESKTOP_CLIENT_ID GOOGLE_TV_CLIENT_ID UPDATE_PUBLIC_KEY LIVE_BASE; do
+            grep -q "^$k=." .env || { echo "Falta $k en el secreto NATIVE_ENV"; exit 1; }
+          done
       # Por separado, para ver en el registro cuál falla. El token: la API de GitHub sin él tiene un límite por IP
       # (compartida entre los runners) y webrtc-src la usa.
       - name: SDK de Firebase

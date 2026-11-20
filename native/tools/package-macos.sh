@@ -38,8 +38,8 @@ cat > "$C/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <key>CFBundleName</key><string>PokéSurvivor</string>
-  <key>CFBundleDisplayName</key><string>PokéSurvivor</string>
+  <key>CFBundleName</key><string>PokéSurvivor Classic Native</string>
+  <key>CFBundleDisplayName</key><string>PokéSurvivor Classic Native</string>
   <key>CFBundleIdentifier</key><string>com.pokesurvivor.game</string>
   <key>CFBundleExecutable</key><string>PokeSurvivor</string>
   <key>CFBundleIconFile</key><string>PokeSurvivor</string>

@@ -42,7 +42,7 @@ QJS_SRCS := $(QJS)/quickjs.c $(QJS)/dtoa.c $(QJS)/libregexp.c $(QJS)/libunicode.
 OBJS := $(patsubst %.c,$(B)/obj/%.o,$(SRCS))
 
 $(B)/PokeSurvivor.nro: $(B)/pokesurvivor.elf $(B)/romfs/shim/boot.js switch/icon.jpg
-	$(DEVKITPRO)/tools/bin/nacptool --create "PokéSurvivor" "PokéSurvivor" "$(VER)" $(B)/pokesurvivor.nacp
+	$(DEVKITPRO)/tools/bin/nacptool --create "PokéSurvivor Classic Native" "PokéSurvivor" "$(VER)" $(B)/pokesurvivor.nacp
 	$(DEVKITPRO)/tools/bin/elf2nro $< $@ --icon=switch/icon.jpg --nacp=$(B)/pokesurvivor.nacp --romfsdir=$(B)/romfs
 
 $(B)/obj/%.o: %.c platform.h canvas.h gpu.h audio.h tiles_worker.h net.h webrtc.h core/core.h Makefile.switch

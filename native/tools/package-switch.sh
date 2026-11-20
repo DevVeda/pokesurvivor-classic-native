@@ -22,7 +22,7 @@ W=$B/nsp-work
 rm -rf "$W"; mkdir -p "$W/exefs" "$W/control" "$OUT"
 "$T/elf2nso" "$B/pokesurvivor.elf" "$W/exefs/main"
 "$T/npdmtool" "$N/switch/pokesurvivor.json" "$W/exefs/main.npdm" 2> /dev/null   # (avisa de cada campo opcional que falta)
-"$T/nacptool" --create "PokéSurvivor" "PokéSurvivor" "$VER" "$W/control/control.nacp" --titleid=$TID
+"$T/nacptool" --create "PokéSurvivor Classic Native" "PokéSurvivor" "$VER" "$W/control/control.nacp" --titleid=$TID
 cp "$N/switch/icon.jpg" "$W/control/icon_AmericanEnglish.dat"
 
 # ponytail: sin logo propio (--nologo: pantalla negra al abrir); con uno, --logodir con NintendoLogo.png y StartupMovie.gif.

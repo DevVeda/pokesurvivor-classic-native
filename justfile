@@ -70,6 +70,15 @@ windows: _env
 _env:
     node tools/apply-env.mjs
 
+# Copia tu .env al secreto NATIVE_ENV de GitHub (las releases de Linux, Windows y Android): así salen igual que las que
+# compilas aquí (Google, autoactualización, LIVE_BASE). Sólo las claves que lee apply-env.mjs; la privada de las
+# actualizaciones no sale de aquí: va su pública (la «key» de update en js/env.js). Repetir cada vez que cambie .env.
+ci-env: _env
+    s=$(grep -E '^(FIREBASE_[A-Z_]+|SITE_HOSTS|NAME_DOMAIN|ADMIN_UIDS|LIVE_BASE|UPDATE_AUTHOR|UPDATE_URLS|GOOGLE_(DESKTOP|TV)_CLIENT_(ID|SECRET)|ICE_URL)=' .env; \
+      node -e 'global.window={};require("./js/env.js");const u=window.PS_ENV.update;if(!u)process.exit(1);console.log("UPDATE_PUBLIC_KEY="+u.key)'); \
+    printf '%s\n' "$s" | gh secret set NATIVE_ENV
+    @echo "NATIVE_ENV actualizado"
+
 # Reemplaza TODO lo que había en el Worker (lo de live/*.json también va). La 1.ª vez: npx wrangler login.
 # Publicar: firmar la actualización (tools/sign-update.mjs → dist/live/) y subirla al Worker de LIVE_BASE, con news.json
 #   just web            sube a PAGES_PROJECT (por defecto pokesurvivor-web; la 1.ª vez: npx wrangler login)

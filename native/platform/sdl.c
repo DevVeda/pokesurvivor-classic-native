@@ -90,14 +90,14 @@ plat_video_init(const Uint32 *screen, int w, int h) {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 #define SDL_StartTextInput() ((void)0)
 #endif
-  win = want_gpu ? SDL_CreateWindow("PokéSurvivor", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, ww, wh, flags | SDL_WINDOW_OPENGL) : NULL;
+  win = want_gpu ? SDL_CreateWindow("PokéSurvivor Classic Native", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, ww, wh, flags | SDL_WINDOW_OPENGL) : NULL;
   if(win && !gpu_open(win, w, h)) { SDL_StartTextInput(); return 0; }
   if(want_gpu) {   // sin GL (o falló gpu_open): otra ventana sin OpenGL y el camino de la CPU
     fprintf(stderr, "[gpu] sin OpenGL: la pantalla por PlutoVG\n");
     if(SDL_GL_GetCurrentContext()) SDL_GL_DeleteContext(SDL_GL_GetCurrentContext());
     if(win) SDL_DestroyWindow(win);
   }
-  if(!(win = SDL_CreateWindow("PokéSurvivor", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, ww, wh, flags)))
+  if(!(win = SDL_CreateWindow("PokéSurvivor Classic Native", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, ww, wh, flags)))
     return -1;
   // Con GPU y vsync; si no hay (un Linux sin aceleración, SDL_VIDEODRIVER=dummy en las pruebas), el de software.
   if(!(ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC)) &&

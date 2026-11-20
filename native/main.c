@@ -761,6 +761,9 @@ static int kb_slot;   // la plaza del teclado y el ratón: 0 = con el jugador 1 
 // Android (tablet con teclado): alguien ya juega con el teclado (una tecla de verdad: no «atrás» ni el teclado de la
 // pantalla). Entonces el teclado (y el táctil) son el J1 y cada mando espera su confirmar para entrar como J2-J4.
 static int kb_used;
+// El mando del J1 en cuanto pulsa algo (p_poll). Uno sin usar no cuenta para meter al teclado como otro jugador: la Steam
+// Deck (Steam Input en escritorio) da sus botones como teclas (A = Enter) y su mando puede no mandar nada.
+static SDL_GameController *used;
 #endif
 #if (defined(PS5_TITLE) && defined(PS5_DEV)) || defined(DESKTOP)
 // ps.core_pads() -> los mandos que hay (un bit cada uno; ✕ en otro mando lo suma: p_poll, abajo).
@@ -782,7 +785,7 @@ js_core_pads(JSContext *ctx, JSValueConst this, int argc, JSValueConst *argv) {
 static JSValue
 js_core_kb(JSContext *ctx, JSValueConst this, int argc, JSValueConst *argv) {
   if(kb_slot && argc > 0 && num(ctx, argv[0]) < 0) { say("[p1] el teclado vuelve al jugador 1\n"); kb_slot = 0; }
-  if(!kb_slot && pad && argc > 0 && num(ctx, argv[0]) > 0) {
+  if(!kb_slot && pad && pad == used && argc > 0 && num(ctx, argv[0]) > 0) {
     int me = 1;
     while(me < MAXP && pads[me]) me++;
     if(me < MAXP) { kb_slot = me; say("[p%d] Enter en el teclado: entra el jugador %d (teclado y ratón)\n", me + 1, me + 1); }
@@ -1024,7 +1027,6 @@ p_any(SDL_GameController *p) {
 
 static void
 p_poll(Uint64 now) {
-  static SDL_GameController *used;   // el mando del J1, en cuanto pulsa algo
   (void)now;
   if(pad && pad != used && p_any(pad)) used = pad;
   // El teclado es el J1 (kb_used): un mando del J1 sin usar (uno de verdad conectado antes, o el teclado mismo visto

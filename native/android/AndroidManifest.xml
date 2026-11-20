@@ -13,7 +13,7 @@
   <!-- plat_keep_alive: que Android no congele el juego mientras se espera la vuelta de Google (PokeSurvivorActivity$Wait) -->
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-  <application android:label="PokéSurvivor" android:icon="@mipmap/ic_launcher" android:allowBackup="true"
+  <application android:label="PokéSurvivor Classic Native" android:icon="@mipmap/ic_launcher" android:allowBackup="true"
                android:hardwareAccelerated="true" android:isGame="true" android:extractNativeLibs="true"
                android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
     <activity android:name=".PokeSurvivorActivity" android:exported="true" android:launchMode="singleInstance"

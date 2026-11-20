@@ -36,7 +36,7 @@ plat_video_init(const Uint32 *screen, int w, int h) {
   fb = screen; fw = w; fh = h;
   if(SDL_InitSubSystem(SDL_INIT_VIDEO)) return -1;
   SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");   // (la pantalla en portátil: cada dedo al JS, como en Android; main.c)
-  if(!(win = SDL_CreateWindow("PokéSurvivor", 0, 0, 1920, 1080, SDL_WINDOW_FULLSCREEN | SDL_WINDOW_OPENGL))) return -1;
+  if(!(win = SDL_CreateWindow("PokéSurvivor Classic Native", 0, 0, 1920, 1080, SDL_WINDOW_FULLSCREEN | SDL_WINDOW_OPENGL))) return -1;
   if(want_gpu() && !gpu_open(win, w, h)) goto ready;
   fprintf(stderr, "[switch] sin GPU: la pantalla por PlutoVG\n");   // (sigue el camino de antes, más lento)
   if(!(ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC))) return -1;

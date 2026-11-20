@@ -62,6 +62,11 @@ const FILES = ['index.html', '404.html', 'favicon.ico', 'manifest.webmanifest', 
 const DIRS = ['assets', 'css', 'js', 'apoyar', 'contacto', 'en', 'guia', 'legendarios', 'logros', 'movimientos', 'novedades', 'objetos', 'pokedex', 'privacidad', 'shinies', 'tipos'];
 for (const f of [...FILES, ...DIRS]) if (existsSync(join(root, f))) cpSync(join(root, f), join(out, f), { recursive: true });
 for (const f of [...SHIM, ...LAZY, 'native/LICENSE', 'native/NOTICE.md', 'native/LICENSE-EXCEPTION.md']) cpSync(join(root, f), join(out, f));   // (sólo esos de native/)
+// La web entra con Google por la ventana de Firebase: los clientes OAuth de escritorio y consolas no le hacen falta.
+// ponytail: sólo la web; los nativos llevan los dos porque la actualización (sign-update.mjs) es la misma para todos.
+const envOut = join(out, 'js/env.js');
+writeFileSync(envOut, rd('js/env.js').toString().replace(/"google(Desktop|TV)":\{[^}]*\}/g, '"google$1":null'));
+if (/googleusercontent/.test(rd('js/env.js').toString()) && /googleusercontent/.test(readFileSync(envOut, 'utf8'))) { console.error('build-web: Google nativo sigue en dist/web/js/env.js'); process.exit(1); }
 // version.json siempre fresco (Pages cachea por defecto)
 // @step publish/webupd event "Jugadores web"
 // Cada navegador ve el version.json nuevo (no-cache por _headers) y G.Updater recarga fuera de partida

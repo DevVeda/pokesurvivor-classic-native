@@ -3090,7 +3090,7 @@
     ['Multijugador', 'friends', () => {
       const req = G.DB.online && G.Social.started ? G.Social.friends.filter(f => f.status === 'in').length : 0;
       return req ? G.I18n.f('{x} solicitudes de amistad', req) : 'Juega en grupo, hasta 4';
-    }, () => friendsScreen()],
+    }, () => (!G.DB.online && ps.core_pads ? localCoopScreen() : friendsScreen())],   // (sin nube: el cooperativo local sigue)
     ['Tienda Kecleon', 'shop', () => 'Mentas, Cápsulas y MT', shopScreen],
     ['Mochila', 'bag', () => {
       const s = G.DB.save, candy = (s.bag && s.bag.candy) || 0, items = sum(s.bag) - candy, tms = sum(s.tms), iris = G.Gacha.BANNERS.filter(b => G.Gacha.hasIris(s, b.gen)).length, parts = [];
@@ -4610,7 +4610,7 @@
       if (kbOn) { const kb = ps.core_kb(0); if (kb && out.has(kb)) ps.core_kb(-1); globalThis.psKbOwn = false; }   // (fuera: vuelve al J1)
       G.Audio.sfx('confirm'); close(); G.UI.hideAll(); G.Game.startRun();
     }
-    const leave = () => { if (kbOn) { ps.core_kb(-1); globalThis.psKbOwn = false; } globalThis.psCoopPick = null; globalThis.psCoopOut = null; G.Audio.sfx('back'); close(); friendsScreen(); };
+    const leave = () => { if (kbOn) { ps.core_kb(-1); globalThis.psKbOwn = false; } globalThis.psCoopPick = null; globalThis.psCoopOut = null; G.Audio.sfx('back'); close(); G.DB.online ? friendsScreen() : mainMenu(); };
     open({ wheel: true,
       draw(now) {
         pads(now); pad0();

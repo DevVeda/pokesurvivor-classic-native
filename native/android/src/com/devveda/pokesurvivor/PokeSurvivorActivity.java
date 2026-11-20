@@ -71,7 +71,7 @@ public class PokeSurvivorActivity extends SDLActivity {
     try {
       String stamp = String.valueOf(getPackageManager().getPackageInfo(getPackageName(), 0).lastUpdateTime);
       if (stamp.equals(read(mark))) return root.getPath();
-      runOnUiThread(() -> Toast.makeText(this, "PokéSurvivor…", Toast.LENGTH_LONG).show());
+      runOnUiThread(() -> Toast.makeText(this, "PokéSurvivor Classic Native…", Toast.LENGTH_LONG).show());
       rm(root);
       byte[] buf = new byte[1 << 16];
       try (ZipFile z = new ZipFile(getApplicationInfo().sourceDir)) {
@@ -148,7 +148,7 @@ public class PokeSurvivorActivity extends SDLActivity {
         b = new Notification.Builder(this, "login");
       } else b = new Notification.Builder(this);
       // (icono del sistema: el del juego es adaptativo y en la barra de notificaciones no vale)
-      Notification n = b.setSmallIcon(android.R.drawable.ic_popup_sync).setContentTitle("PokéSurvivor")
+      Notification n = b.setSmallIcon(android.R.drawable.ic_popup_sync).setContentTitle("PokéSurvivor Classic Native")
           .setContentText("Google…").setOngoing(true).build();
       if (Build.VERSION.SDK_INT >= 34) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
       else startForeground(1, n);

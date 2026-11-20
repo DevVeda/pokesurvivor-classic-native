@@ -14,7 +14,7 @@ bash "$N/tools/stage-game.sh" "$D/usr/share/pokesurvivor"   # (plat_root: ../sha
 cat > "$OUT/pokesurvivor.desktop" <<DESK
 [Desktop Entry]
 Type=Application
-Name=PokéSurvivor
+Name=PokéSurvivor Classic Native
 Exec=pokesurvivor
 Icon=pokesurvivor
 Categories=Game;
