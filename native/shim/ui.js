@@ -59,6 +59,7 @@
     'Inicial': ['Initial', 'Initiale', 'Iniziale', 'Inicial', '首字母', '首字母'],
     'Generación': ['Generation', 'Génération', 'Generazione', 'Geração', '世代', '世代'],
     'Quedan {x}': ['{x} left', 'Il en reste {x}', 'Ne restano {x}', 'Restam {x}', '剩余 {x}', '剩餘 {x}'],
+    'Esta versión ya no puede jugar online. Actualiza el juego a la última versión.': ['This version can no longer play online. Update the game to the latest version.', 'Cette version ne peut plus jouer en ligne. Mets le jeu à jour vers la dernière version.', 'Questa versione non può più giocare online. Aggiorna il gioco all’ultima versione.', 'Esta versão não pode mais jogar online. Atualize o jogo para a versão mais recente.', '此版本已无法在线游戏。请将游戏更新到最新版本。', '此版本已無法線上遊戲。請將遊戲更新到最新版本。'],
     'Cooperativo local': ['Local co-op', 'Coop locale', 'Coop locale', 'Cooperativo local', '本地合作', '本地合作'],
     'Listo': ['Ready', 'Prêt', 'Pronto', 'Pronto', '就绪', '就緒'],
     'Viendo el resumen': ['Viewing the summary', 'Regarde le résumé', 'Sta guardando il riepilogo', 'Vendo o resumo', '正在查看总结', '正在查看總結'],
@@ -1515,11 +1516,11 @@
   function hudHints() {
     const pl = G.Game.player;
     if (!pl || G.Game.state !== 'playing' || !G.Pad.name || globalThis.psKeys) return;   // (con teclado: las teclas de la web, en su HUD)
+    if (ps.core_pads && ps.core_pads() > 1) return;   // cooperativo local: cada barra va a su esquina, sin la del J1 en el centro (core.js)
     const LW = psLogical.w, LH = psLogical.h, k = H / LH;   // el HUD dibuja en píxeles lógicos (browser.js), sin centrar
     const S = 54, GAP = 9, n = Math.max(1, pl.slots.length), totalW = n * S + (n - 1) * GAP;
     const sx = (LW - totalW) / 2, sy = LH - S - 18;
-    const hc = globalThis.psHudCv && psHudCv();   // cooperativo local: con la barra, en su esquina (main.c)
-    ctx = hc ? hc.getContext('2d') : screen;
+    ctx = screen;
     ctx.save(); ctx.setTransform(ps.H / H, 0, 0, ps.H / H, 0, 0);   // (sin OX: el HUD del juego, en píxeles lógicos; ps.H / H aunque K vaya por el ancho)
     // Por fuera del cuadro del objeto (a la izquierda, siempre) y del vínculo guardado (a la derecha, si hay).
     if (n > 1) {
@@ -3954,8 +3955,8 @@
       draw() {
         const BW2 = 420, X = (W - BW2) / 2, Y = 40, BH2 = H - 80;
         dim(); box(X, Y, BW2, BH2);
-        text('PokéSurvivor Classic', W / 2 + 2, Y + 18 + 2, 30, C.navy, 'center', true, null);
-        text('PokéSurvivor Classic', W / 2, Y + 18, 30, C.gold, 'center', true, null);
+        text('PokéSurvivor Classic Native', W / 2 + 2, Y + 18 + 2, 26, C.navy, 'center', true, null);
+        text('PokéSurvivor Classic Native', W / 2, Y + 18, 26, C.gold, 'center', true, null);
         text(T('La misma cuenta y la misma partida que en la web'), W / 2, Y + 58, 10, C.muted, 'center');
         ['Entrar', 'Crear cuenta'].forEach((t, i) => {
           const x = X + 18 + i * ((BW2 - 40) / 2 + 4), w = (BW2 - 40) / 2;
@@ -4379,7 +4380,7 @@
           if (ev.dx && sel === 0) { const k = LOCAL ? 3 : 2; act = (act + ev.dx + k) % k; G.Audio.sfx('select'); }
           if (ev.a) {
             if (sel === 0 && act === 2) { G.Social.off(onChange); G.Audio.sfx('select'); close(); localCoopScreen(); }
-            else if (sel === 0 && act === 1) { G.Social.off(onChange); G.Audio.sfx('select'); close(); if (G.Social.room) lobbyScreen(); else G.Social.createRoom().then(lobbyScreen, e => { G.UI.toast(T('No se pudo crear la sala')); console.warn('[sala] ' + (e && e.message)); mainMenu(); }); }
+            else if (sel === 0 && act === 1) { G.Social.off(onChange); G.Audio.sfx('select'); close(); if (G.Social.room) lobbyScreen(); else G.Social.createRoom().then(lobbyScreen, e => { G.UI.toast(T((e && e.msg) || 'No se pudo crear la sala'), e && e.msg ? 4200 : undefined); console.warn('[sala] ' + (e && e.message)); mainMenu(); }); }
             else if (sel === 0) {
               close();
               keyboard('Apodo de tu amigo', '', { max: 16 }, v => {
@@ -5124,12 +5125,13 @@
           apply: () => { try { if (hwPick) localStorage.setItem('ps5.halloween', hwPick); else localStorage.removeItem('ps5.halloween'); } catch (e) { return; } location.reload(); } },
       ]],
       ['Acerca de', () => [
-        info('PokéSurvivor Classic', 'Juego de fans gratuito y sin ánimo de lucro: sin anuncios ni compras. Pokémon y sus personajes son propiedad de Nintendo, Creatures y GAME FREAK; este proyecto no está afiliado a ellos.'),
+        info('PokéSurvivor Classic Native', 'Juego de fans gratuito y sin ánimo de lucro: sin anuncios ni compras. Pokémon y sus personajes son propiedad de Nintendo, Creatures y GAME FREAK; este proyecto no está afiliado a ellos.'),
         info('Sprites', 'PMD SpriteCollab y sus artistas (CC BY-NC 4.0).'),
         info('Datos de los Pokémon', 'PokéAPI.'),
         info('Música y sonidos', 'originales, generados por el propio juego.'),
         info('Fuente', 'Pixelify Sans (OFL).'),
         info(T('Versión'), PS_VERSION || '—'),
+        info('Build', G.ENV.build || '—'),   // (el commit del que salió: tools/apply-env.mjs)
         // (el nombre de la plataforma sólo para enseñarlo)
         ({ web: info('Web', 'Las pantallas de las consolas y el escritorio · GPL-3.0'),
            desktop: info('Windows, macOS y Linux', 'QuickJS, PlutoVG, SDL2, libcurl, OpenSSL y libdatachannel · GPL-3.0'),
@@ -5276,7 +5278,7 @@
   // Apoyar: dos Ko-fi, cada uno con su QR: primero el de esta versión (DevVeda), a la derecha el del autor original.
   const KOFI_PS5 = 'https://ko-fi.com/DevVeda';
   function kofiScreen() {
-    const cols = [[KOFI_PS5, 'PokéSurvivor Classic'], [G.Funding.url, T('Autor original')]].map(([url, who]) => [url, who, globalThis.psQR ? psQR(url) : null]);
+    const cols = [[KOFI_PS5, 'PokéSurvivor Classic Native'], [G.Funding.url, T('Autor original')]].map(([url, who]) => [url, who, globalThis.psQR ? psQR(url) : null]);
     const WEBLINK = CAN.browser;   // (sin navegador: sólo el QR)
     let pick = 0;
     const go = i => { pick = i; if (ps.open_url(cols[i][0])) G.Audio.sfx('confirm'); else { G.UI.toast(T('No se pudo abrir el navegador.')); G.Audio.sfx('error'); } };
@@ -5397,7 +5399,7 @@
         text('PokéSurvivor', LX + 4.5, 104.5, 48, C.navy, 'center', true, null);
         text('PokéSurvivor', LX + 2.25, 102.25, 48, '#a55f00', 'center', true, null);
         text('PokéSurvivor', LX, 100, 48, C.gold, 'center', true, null);
-        spaced(('Classic · ' + T('Mundo Misterioso')).toUpperCase(), LX, 158, 13, 2.5);
+        spaced(('Classic Native · ' + T('Mundo Misterioso')).toUpperCase(), LX, 158, 13, 2.5);
         // Halloween: cuenta atrás bajo el título (hwLine de la web): 14 días antes, cuánto falta; durante, cuánto queda.
         const hw = hwText();
         if (hw) { font(11, true); const hw2 = ctx.measureText(hw).width + 18; icon('pumpkin', LX - hw2 / 2, 175, 14); text(hw, LX - hw2 / 2 + 18, 176, 11, '#ffb347', 'left', true); }

@@ -103,7 +103,7 @@ webrtc-src:
 	rm -rf $(LIBDC) && mkdir -p $(LIBDC)
 	curl -sSfL https://codeload.github.com/paullouisageneau/libdatachannel/tar.gz/refs/tags/$(LIBDC_VER) | tar xz --strip-components=1 -C $(LIBDC)
 	for d in libjuice usrsctp plog; do \
-	  info=$$(curl -sSf "https://api.github.com/repos/paullouisageneau/libdatachannel/contents/deps/$$d?ref=$(LIBDC_VER)") || exit 1; \
+	  info=$$(curl -sSf --retry 3 $${GITHUB_TOKEN:+-H "Authorization: Bearer $$GITHUB_TOKEN"} "https://api.github.com/repos/paullouisageneau/libdatachannel/contents/deps/$$d?ref=$(LIBDC_VER)") || exit 1; \
 	  sha=$$(printf '%s' "$$info" | python3 -c "import json,sys; print(json.load(sys.stdin)['sha'])"); \
 	  repo=$$(printf '%s' "$$info" | python3 -c "import json,sys,re; print(re.sub(r'^https://github.com/|\\.git$$','',json.load(sys.stdin)['submodule_git_url']))"); \
 	  echo "$$d: $$repo @ $$sha"; \

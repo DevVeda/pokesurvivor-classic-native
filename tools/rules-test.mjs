@@ -50,6 +50,14 @@ check('leer ranking sin cuenta', await get(null, 'lbs/s_y'), 200);
 check('leer una marca sin cuenta', await get(null, 'lb/s_y/e/ana'), 200);
 check('listar marcas sin cuenta', await get(null, 'lb/s_y/e'), 403);
 check('listar marcas con cuenta', await get('bob', 'lb/s_y/e'), 200);
+
+// --- versión mínima para jugar online (config/online.min)
+check('config sin cuenta se lee', await get(null, 'config/online'), 404);
+check('config: un jugador no la cambia', await commit('ana', [['config/online', { min: 1 }]]), false);
+check('config: el dueño la pone (1.0.2)', await commit(null, [['config/online', { min: 10002 }]]), true);
+check('marca sin ver, con mínimo', await commit('ana', [['lb/s_v/e/ana', entry, ['at']]]), false);
+check('marca de versión vieja', await commit('ana', [['lb/s_v/e/ana', { ...entry, ver: 10001 }, ['at']]]), false);
+check('marca de versión al día', await commit('ana', [['lb/s_v/e/ana', { ...entry, ver: 10002 }, ['at']]]), true);
 check('listar todas las tablas (no admin)', await get('bob', 'lbs'), 403);
 check('listar apodos', await get('bob', 'names'), 403);
 check('leer un apodo', await get('bob', 'names/ana_99'), 200);

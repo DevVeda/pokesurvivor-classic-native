@@ -1,0 +1,55 @@
+name: Bug report
+description: Something doesn't work as it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to reproduce it
+      placeholder: |
+        1. Start a run with…
+        2. …
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options:
+        - Web
+        - Windows
+        - macOS
+        - Linux
+        - Steam Deck
+        - Android
+        - PS5
+        - Switch
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown in Settings → About (version and build).
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options:
+        - Solo
+        - Local co-op
+        - Online co-op
+        - Menus / outside a run
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, video or logs
+      description: Anything else that helps. Don't paste passwords, tokens or other private data.

@@ -470,6 +470,8 @@ G.Ranking = (() => {
   }
 
   /** Sin sello (#356): la partida no entra, y ahora se dice (antes, sin avisar). */
+  // Versión por debajo de config/online.min (G.Social.onlineOk): ni se intenta (las reglas la rechazarían).
+  function oldVer() { G.UI.toast(G.Social.OLD_MSG, 4200); }
   function noSeal() { G.UI.toast('Esta partida no ha podido entrar en el ranking: no se pudo conectar con el servidor.', 4200); }
 
   /** Servidor propio: la marca se manda entera y el servidor la mete donde toque (→ las tablas donde mejoras). */
@@ -501,12 +503,13 @@ G.Ranking = (() => {
     const sl = mySeal();
     if (!fb || !G.Social.me || r.t < MIN_T) return [];
     if (!sl && NEED_SEAL) { noSeal(); return []; }
+    if (!(await G.Social.onlineOk())) { oldVer(); return []; }
     // Endless ('e', 11-11-2026): sus propias tablas (e_...), sólo por Firestore y sin tablas por Pokémon.
     const m = r.mode === 'e' ? 'e' : 's';
     if (m === 's' && useVps() && sl) return submitVps({ mode: 's', g: sl.g, ...fit(r), name: G.Social.me.name, dex: r.dex, shiny: !!r.shiny }, 's');
     flushDeferred();
     const ids = boardIds();
-    const entry = Object.assign({ uids: [fb.uid], names: [G.Social.me.name], dex: [r.dex], shiny: [!!r.shiny] }, sl ? { seal: [sl] } : {}, fit(r));
+    const entry = Object.assign({ uids: [fb.uid], names: [G.Social.me.name], dex: [r.dex], shiny: [!!r.shiny], ver: G.Social.version }, sl ? { seal: [sl] } : {}, fit(r));
     const boards = PERIODS.map(([p]) => [m + '_' + ids[p], p]);
     if (m === 's' && r.t >= MIN_T_MON) boards.push(['s_' + ALL + '_p' + r.dex, 'p']);
     const better = await store(boards, fb.uid, entry);
@@ -527,12 +530,13 @@ G.Ranking = (() => {
     const seals = ms.map(m => (m.uid === fb.uid ? mySeal() : okSeal(m.seal) ? { s: m.seal.s, g: m.seal.g } : null));
     const sealed = seals.every(Boolean);
     if (!sealed && NEED_SEAL) { noSeal(); return []; }
+    if (!(await G.Social.onlineOk())) { oldVer(); return []; }
     if (useVps() && sealed) {
       return submitVps({ mode: 'g', ...fit(r),
         members: ms.map((m, i) => ({ uid: m.uid, name: m.name, dex: m.dex, shiny: !!m.shiny, s: seals[i].s, g: seals[i].g })) }, 'g');
     }
     const entry = Object.assign({ uids: ms.map(m => m.uid), names: ms.map(m => m.name), dex: ms.map(m => m.dex),
-                    shiny: ms.map(m => !!m.shiny) }, sealed ? { seal: seals } : {}, fit(r));
+                    shiny: ms.map(m => !!m.shiny), ver: G.Social.version }, sealed ? { seal: seals } : {}, fit(r));
     const ids = boardIds();
     const boards = PERIODS.map(([p]) => ['g_' + ids[p], p]);
     if (r.t >= MIN_T_MON) for (const d of new Set(entry.dex)) boards.push(['g_' + ALL + '_p' + d, 'p']);

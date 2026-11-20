@@ -5,6 +5,7 @@
 set -euo pipefail
 N=$(cd "$(dirname "$0")/.." && pwd) S=$(cd "$N/.." && pwd)
 VER=$(tr -d ' \r\n' < "$S/VERSION")   # (la versión: el archivo VERSION de la raíz)
+BUILD=$(tr -d ' \r\n' < "$S/BUILD" 2>/dev/null || true); SLUG=$VER${BUILD:+-$BUILD}   # (nombre de archivo: versión y build, tools/apply-env.mjs)
 OUT=$N/build/dist/linux D=$N/build/dist/linux/AppDir
 make -C "$N" -f Makefile.desktop B=build/linux CC=gcc CXX=g++ -j"$(nproc)"
 rm -rf "$OUT" && mkdir -p "$D/usr/bin" "$D/usr/share/pokesurvivor"
@@ -24,8 +25,9 @@ cp -a "$D" "$OUT/pokesurvivor"   # (la carpeta tal cual, sin AppImage)
 # make con gcc, stage-game en AppDir.
 # @next appimg
 # @step desktop/appimg build "AppImage"
-# linuxdeploy mete las librerías y genera PokeSurvivor-<VER>-x86_64.AppImage.
+# linuxdeploy mete las librerías y genera PokeSurvivor-<VER>-<BUILD>-x86_64.AppImage.
 # @next dist
 cd "$OUT" && linuxdeploy --appdir "$D" -d pokesurvivor.desktop -i pokesurvivor.png --output appimage
-mv "$OUT"/PokéSurvivor*.AppImage "$OUT/PokeSurvivor-$VER-x86_64.AppImage" 2> /dev/null || true
+rm -f "$OUT"/PokeSurvivor-*-x86_64.AppImage   # (los de otros builds)
+mv "$OUT"/PokéSurvivor*.AppImage "$OUT/PokeSurvivor-$SLUG-x86_64.AppImage" 2> /dev/null || true
 ls -la "$OUT"

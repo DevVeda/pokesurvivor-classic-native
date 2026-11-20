@@ -1,45 +1,44 @@
-# Contribuir
+# Contributing
 
-Gracias por querer ayudar. Esto es un proyecto de fan, gratis y sin ánimo de lucro.
+Thanks for wanting to help. This is a fan project: free and non-profit.
 
-## Antes de empezar
+## Before you start
 
-- Se trabaja en la rama **`dev`**: un solo código para todas las plataformas. No hay ramas por plataforma.
-- Lo que cambia de una plataforma a otra va en `native/platform/<nombre>.c` (C) o se pregunta a `ps.CAN`
-  (JS, en `native/shim/browser.js` y `native/shim/web.js`). Nunca por el nombre de la plataforma.
-- El juego son las fuentes de `js/<área>/`; `js/app.js` se genera (`node tools/app-js.mjs`) y no va en git.
-  Un archivo nuevo del juego se añade a `js/files.js`.
-- Para un cambio grande, abre antes un issue para hablarlo.
+- Work happens on the **`dev`** branch: one codebase for every platform. There are no per-platform branches.
+- Anything that differs between platforms goes in `native/platform/<name>.c` (C) or asks `ps.CAN`
+  (JS, in `native/shim/browser.js` and `native/shim/web.js`). Never by checking the platform's name.
+- The game is the sources in `js/<area>/`; `js/app.js` is generated (`node tools/app-js.mjs`) and is not in git.
+  A new game file must be added to `js/files.js`.
+- For a big change, open an issue first to discuss it.
 
-## Probar
+## Testing
 
 ```bash
 just test
 ```
 
-- `just test`: el arnés de las pantallas (`errores: 0`) y las pruebas de los shims.
-- `make -C native core-test`: el núcleo en C contra el JS.
-- `just check`: compila todas las plataformas. Obligatorio si tocas `native/`, los shims o los scripts de build.
-- Si cambias algo que se ve, pruébalo en la web (`just web-local`) y, si puedes, en la plataforma que toque.
+- `just test`: the screen harness (`errores: 0`) and the shim tests.
+- `make -C native core-test`: the C core checked against the JS.
+- `just check`: builds every platform. Required if you touch `native/`, the shims or the build scripts.
+- If you change something visible, try it on the web (`just web-local`) and, if you can, on the platform it affects.
 
-## Controles
+## Controls
 
-Todo lo que se elige con el mando se elige también con un clic o con el dedo; ○ / Esc vuelve siempre;
-lo que no se deshace pide confirmación con el foco en «No». Los textos no llevan botones escritos a mano:
-se usan los tokens (`{confirm}`, `{back}`…) de `native/shim/ui.js`.
+Everything you can pick with a controller can also be picked with a click or a tap; ○ / Esc always goes back;
+anything that can't be undone asks for confirmation with the focus on "No". Texts never spell out buttons by hand:
+use the tokens (`{confirm}`, `{back}`…) from `native/shim/ui.js`.
 
 ## Commits
 
-- Estilo Conventional Commits, en español y cortos: `tipo(ámbito): qué` (`feat`, `fix`, `perf`, `chore`,
-  `docs`, `refactor`, `test`).
-- Nada de secretos: `.env`, claves de consola, keystores y cuentas de servicio están en `.gitignore` y no se
-  suben nunca.
+- Conventional Commits, short, in English or Spanish: `type(scope): what` (`feat`, `fix`, `perf`, `chore`, `docs`,
+  `refactor`, `test`).
+- No secrets: `.env`, console keys, keystores and service accounts are in `.gitignore` and are never pushed.
 
-## Licencia de lo que aportes
+## License of your contributions
 
-Lo que aportes queda bajo la licencia de la parte del repositorio que tocas: el juego (`js/`, `css/`,
-`index.html`, `tools/`) bajo [PolyForm Noncommercial 1.0.0](LICENSE-NONCOMMERCIAL.md) y el motor nativo
-(`native/`) bajo [GPL-3.0-or-later](native/LICENSE). No aportes código ni recursos que no puedas compartir
-así (sprites, música o código de terceros con otra licencia, o de Nintendo / The Pokémon Company).
+Whatever you contribute falls under the license of the part of the repository you touch: the game (`js/`, `css/`,
+`index.html`, `tools/`) under [PolyForm Noncommercial 1.0.0](LICENSE-NONCOMMERCIAL.md) and the native engine
+(`native/`) under [GPL-3.0-or-later](native/LICENSE). Don't contribute code or assets you can't share that way
+(third-party sprites, music or code under another license, or anything from Nintendo / The Pokémon Company).
 
-Al participar aceptas el [código de conducta](CODE_OF_CONDUCT.md).
+By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).

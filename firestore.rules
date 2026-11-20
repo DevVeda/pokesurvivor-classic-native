@@ -99,7 +99,8 @@ service cloud.firestore {
     // validEntry: id con uids del que escribe, límites de t/lv/kills/dmg, at=request.time; lbs con
     // getAfter. No comprueban sello ni ban.
     function validEntry(e, id) {
-      return e.keys().hasOnly(['uids', 'names', 'dex', 'shiny', 'seal', 't', 'rt', 'lv', 'kills', 'dmg', 'at'])
+      return e.keys().hasOnly(['uids', 'names', 'dex', 'shiny', 'seal', 't', 'rt', 'lv', 'kills', 'dmg', 'at', 'ver'])
+        && verOk(e)
         && e.uids is list && e.uids.size() >= 1 && e.uids.size() <= 4
         && me() in e.uids && id == e.uids.join('_')
         && e.names is list && e.names.size() == e.uids.size()
@@ -108,6 +109,18 @@ service cloud.firestore {
         && e.kills is int && e.kills >= 0 && e.kills <= 100 + e.t * 12
         && e.dmg is int && e.dmg >= 0 && (e.t < 1800 ? e.dmg == 0 : e.dmg <= (e.t - 1799) * 50000)
         && e.at == request.time;
+    }
+    // Versión mínima para jugar online (config/online.min, MAYOR*10000 + MENOR*100 + PARCHE: 1.0.2 → 10002). Sin el
+    // documento vale todo; con él, la marca lleva ver (G.Social.version) y no es menor. Las versiones de antes no mandan
+    // ver: quedan fuera en cuanto se pone un mínimo.
+    function verOk(e) {
+      return !exists(/databases/$(database)/documents/config/online)
+        || (e.get('ver', 0) is int && e.get('ver', 0) >= get(/databases/$(database)/documents/config/online).data.min);
+    }
+    // ---- Configuración pública del servidor (config/online: la versión mínima). La lee cualquiera; la cambia el admin.
+    match /config/{id} {
+      allow get: if true;
+      allow write: if admin();
     }
     // @step rank/rules
     // Una marca suelta la lee cualquiera; consultas (listas) sólo con cuenta: sin ella, un script leía todas las marcas.

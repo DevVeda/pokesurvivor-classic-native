@@ -288,7 +288,7 @@ if (process.argv[3] === 'ui') {
     [1500, () => tap(B.x)],
     // Ajustes recuerda la pestaña: venimos de Desarrollador y la siguiente es Acerca de.
     [300, () => tap(B.r1)],
-    [900, () => { for (let i = 0; i < 7; i++) setTimeout_(() => tap(B.down), i * 150); }],   // (Acerca de: 7 filas antes del botón, Versión incluida)
+    [900, () => { for (let i = 0; i < 8; i++) setTimeout_(() => tap(B.down), i * 150); }],   // (Acerca de: 8 filas antes del botón, Versión y Build incluidas)
     [1000, () => { global.drawn = []; tap(B.x); }],
     [400, () => { const t = drawn.join(' | '); out('[legal] ' + t.slice(0, 160)); expect('aviso legal: el texto de index.html', /Nintendo/.test(t) && drawn.length > 12); global.drawn = null; }],
     [200, () => tap(B.o)], [300, () => tap(B.o)],

@@ -1,22 +1,22 @@
-# Seguridad
+# Security
 
-## Avisar de un fallo
+## Reporting a vulnerability
 
-**No abras un issue público.** Usa el aviso privado de GitHub: pestaña *Security* → *Report a vulnerability*
-de este repositorio. Cuenta qué es, cómo reproducirlo y qué afecta. Contestaremos en cuanto podamos.
+**Don't open a public issue.** Use GitHub's private reporting: this repository's *Security* tab → *Report a
+vulnerability*. Explain what it is, how to reproduce it and what it affects. We'll answer as soon as we can.
 
-## Qué interesa
+## In scope
 
-- Las reglas de la base de datos (`firestore.rules`, `database.rules.json`): leer o escribir partidas,
-  perfiles, ranking o salas de otros.
-- Las actualizaciones de las versiones nativas (`native/update.c`, `native/shim/update.js`): instalar algo
-  que no esté firmado con la clave del servidor.
-- La red de las versiones nativas (`native/net.c`, `native/shim/net.js`) y el cooperativo (`native/webrtc.c`).
-- Cualquier secreto que se haya colado en el repositorio o en su historial.
+- The database rules (`firestore.rules`, `database.rules.json`): reading or writing other players' saves,
+  profiles, rankings or rooms.
+- Updates of the native builds (`native/update.c`, `native/shim/update.js`): installing anything not signed
+  with the server's key.
+- Networking in the native builds (`native/net.c`, `native/shim/net.js`) and co-op (`native/webrtc.c`).
+- Any secret that slipped into the repository or its history.
 
-## Qué no
+## Out of scope
 
-- Trampas en tu propia partida o en el ranking de tu propio servidor.
-- Fallos de servidores ajenos que usen este código: avisa a quien lo lleve.
+- Cheating in your own run or on your own server's ranking.
+- Bugs in other people's servers running this code: report them to whoever runs that server.
 
-Prueba sólo contra tu propio servidor (`env.example`) y tus propias cuentas.
+Only test against your own server (`env.example`) and your own accounts.

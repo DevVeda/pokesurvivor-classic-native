@@ -1,20 +1,20 @@
-# Código de conducta
+# Code of Conduct
 
-Basado en el [Contributor Covenant 2.1](https://www.contributor-covenant.org/es/version/2/1/code_of_conduct/).
+Based on the [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 
-## Lo que se espera
+## What we expect
 
-- Respeto y amabilidad con todo el mundo, sea cual sea su edad, origen, identidad, nivel o forma de jugar.
-- Críticas sobre el código o las ideas, nunca sobre las personas.
-- Aceptar que otros piensen distinto y aprender de los errores, propios y ajenos.
+- Respect and kindness towards everyone, whatever their age, background, identity, skill level or way of playing.
+- Criticism of code or ideas, never of people.
+- Accepting that others think differently, and learning from mistakes, your own and other people's.
 
-## Lo que no se acepta
+## What is not accepted
 
-- Insultos, acoso, comentarios ofensivos o sexuales y ataques personales.
-- Publicar datos privados de nadie sin su permiso.
-- Spam, estafas o promocionar criptomonedas, tokens o NFT con el nombre del juego.
+- Insults, harassment, offensive or sexual comments, and personal attacks.
+- Publishing anyone's private information without their permission.
+- Spam, scams, or promoting cryptocurrencies, tokens or NFTs using the game's name.
 
-## Si pasa algo
+## If something happens
 
-Avisa en privado a quien mantiene el proyecto (el aviso privado de GitHub, como en [SECURITY.md](SECURITY.md)).
-Se revisará con discreción y se podrá avisar, ocultar comentarios o bloquear a quien no cumpla estas normas.
+Tell the maintainer privately (GitHub's private reporting, as in [SECURITY.md](SECURITY.md)).
+It will be reviewed discreetly, and anyone who breaks these rules may be warned, have comments hidden or be blocked.

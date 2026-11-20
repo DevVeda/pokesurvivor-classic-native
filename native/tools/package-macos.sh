@@ -2,7 +2,7 @@
 # PokéSurvivor.app para macOS (just macos): el binario de Makefile.desktop y el juego (tools/stage-game.sh) en Resources.
 # Universal: Apple Silicon (macOS 11+) e Intel (macOS 10.15+), cada uno con SDL2, curl y OpenSSL estáticos compilados para
 # ese mínimo (tools/mac-deps.sh); nada de Homebrew dentro (sus librerías piden el macOS de este Mac).
-#   native/tools/package-macos.sh      → native/build/dist/macos/PokeSurvivor.app y PokeSurvivor-<VERSION>-macos.zip
+#   native/tools/package-macos.sh      → native/build/dist/macos/PokeSurvivor.app y PokeSurvivor-<VERSION>-<BUILD>-macos.zip
 # @step desktop/macdeps build "Deps estáticas Mac"
 # mac-deps.sh compila SDL2/curl/OpenSSL estáticos por arquitectura.
 # @next lipo
@@ -33,6 +33,7 @@ if otool -L "$C/MacOS/PokeSurvivor" | grep -v ':$' | grep -vE '^\s+(/usr/lib/|/S
 fi
 bash "$N/tools/stage-game.sh" "$C/Resources"
 VER=$(tr -d ' \r\n' < "$S/VERSION")   # (la versión del juego: el archivo VERSION de la raíz)
+BUILD=$(tr -d ' \r\n' < "$S/BUILD" 2>/dev/null || true); SLUG=$VER${BUILD:+-$BUILD}   # (nombre de archivo: versión y build, tools/apply-env.mjs)
 cat > "$C/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -62,5 +63,5 @@ iconutil -c icns "$ICO" -o "$C/Resources/PokeSurvivor.icns" && rm -rf "$ICO"
 # @next dist
 codesign --force --deep -s - "$APP" 2> /dev/null || echo "Aviso: sin firma ad hoc (codesign)."
 # @step desktop/macpkg
-(cd "$N/build/dist/macos" && rm -f PokeSurvivor-*-macos.zip && ditto -c -k --keepParent PokeSurvivor.app "PokeSurvivor-${VER:-0.0.0}-macos.zip")
+(cd "$N/build/dist/macos" && rm -f PokeSurvivor-*-macos.zip && ditto -c -k --keepParent PokeSurvivor.app "PokeSurvivor-${SLUG:-0.0.0}-macos.zip")
 echo "Hecho: $APP ($(du -sh "$APP" | cut -f1); $(lipo -archs "$C/MacOS/PokeSurvivor"), macOS $MIN_X86+ Intel / $MIN_ARM+ Apple Silicon)"

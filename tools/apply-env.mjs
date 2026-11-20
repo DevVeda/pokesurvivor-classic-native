@@ -1,6 +1,7 @@
 // Lee .env y genera los archivos que dependen de él (todos en .gitignore):
 //   js/env.js            → window.PS_ENV: SÓLO valores públicos (los ve el navegador)
 //   firestore.gen.rules  → firestore.rules con los uid de admin
+//   BUILD                → el hash corto del commit (nombres de los paquetes)
 // node tools/apply-env.mjs
 // Nunca imprime valores: sólo nombres de variables.
 // @step publish/envjs data "js/env.js generado"
@@ -10,6 +11,7 @@
 // @step publish/envjs
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createPrivateKey, createPublicKey } from 'node:crypto';
+import { execSync } from 'node:child_process';
 
 const root = new URL('..', import.meta.url).pathname;
 let raw;
@@ -62,7 +64,13 @@ if (env.UPDATE_SIGN_KEY) {
   update = { author: env.UPDATE_AUTHOR || '', key: createPublicKey(k).export({ type: 'spki', format: 'der' }).subarray(12).toString('base64url'), urls };
 }
 
+// La versión (VERSION) y el build (hash corto del commit; '' fuera de git): Ajustes → Acerca de, y la versión mínima para
+// jugar online (G.Social.onlineOk, config/online en Firestore).
+let build = '';
+try { build = execSync('git rev-parse --short=8 HEAD', { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { /* sin git */ }
 const pub = {
+  version: readFileSync(root + 'VERSION', 'utf8').trim(),
+  build,
   firebase: Object.fromEntries(Object.entries({
     apiKey: env.FIREBASE_API_KEY, authDomain: env.FIREBASE_AUTH_DOMAIN, projectId: env.FIREBASE_PROJECT_ID,
     storageBucket: env.FIREBASE_STORAGE_BUCKET, messagingSenderId: env.FIREBASE_MESSAGING_SENDER_ID,
@@ -80,6 +88,7 @@ const pub = {
   googleTV: env.GOOGLE_TV_CLIENT_ID ? { clientId: env.GOOGLE_TV_CLIENT_ID, clientSecret: env.GOOGLE_TV_CLIENT_SECRET || '' } : null,
   update   // { author, key, urls } o null: sin autoactualización
 };
+writeFileSync(root + 'BUILD', build + '\n');   // (los nombres de los paquetes: native/tools/package-*.sh, just ps5)
 writeFileSync(root + 'js/env.js', '/* Generado por tools/apply-env.mjs desde .env. No editar ni subir a git. */\nwindow.PS_ENV = ' + JSON.stringify(pub) + ';\n');
 
 const rules = readFileSync(root + 'firestore.rules', 'utf8');

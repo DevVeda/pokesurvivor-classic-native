@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icons/icon-192.png" alt="PokéSurvivor Classic Native" width="128" height="128">
+  <img src="native/title/icon0.png" alt="PokéSurvivor Classic Native" width="128" height="128">
 </p>
 
 <h1 align="center">PokéSurvivor Classic Native</h1>
@@ -37,6 +37,17 @@ you can donate on [Ko-fi](https://ko-fi.com/DevVeda).
 - **Linux (AppImage, also Steam Deck), Windows and Android (APK):** from the
   [latest release](https://github.com/DevVeda/pokesurvivor-classic-native/releases/latest).
 - **macOS, Switch and PS5:** build them yourself (below).
+
+### Couch co-op
+
+Up to 4 players on one screen, each with their own controller. Together, the camera follows everyone; when you split up,
+the screen splits too. On level-up, each player picks a card in their own part of the screen.
+
+<p align="center"><img src="assets/screenshots/coop-horde.jpg" width="100%" alt="Four players surrounded by a horde"></p>
+<p align="center">
+  <img src="assets/screenshots/coop-split-screen.jpg" width="49%" alt="Split screen with four players">
+  <img src="assets/screenshots/coop-level-up.jpg" width="49%" alt="Level-up cards, one quarter per player">
+</p>
 
 ### What this fork adds
 
@@ -141,6 +152,17 @@ donar en [Ko-fi](https://ko-fi.com/DevVeda).
 - **Linux (AppImage, también Steam Deck), Windows y Android (APK):** en la
   [última versión](https://github.com/DevVeda/pokesurvivor-classic-native/releases/latest).
 - **macOS, Switch y PS5:** se compilan (abajo).
+
+### Cooperativo local
+
+Hasta 4 jugadores en la misma pantalla, cada uno con su mando. Juntos, la cámara sigue a todos; si os separáis, la
+pantalla se parte. Al subir de nivel, cada uno elige su carta en su parte de la pantalla.
+
+<p align="center"><img src="assets/screenshots/coop-horde.jpg" width="100%" alt="Cuatro jugadores rodeados por una horda"></p>
+<p align="center">
+  <img src="assets/screenshots/coop-split-screen.jpg" width="49%" alt="Pantalla partida con cuatro jugadores">
+  <img src="assets/screenshots/coop-level-up.jpg" width="49%" alt="Cartas al subir de nivel, un cuarto por jugador">
+</p>
 
 ### Qué añade este fork
 

@@ -125,7 +125,7 @@ run: _env
 
 # ---------------- Android ----------------
 
-# Android (arm64-v8a, Android 7+): native/build/dist/android/PokeSurvivor-<VERSION>.apk, con el NDK en Docker
+# Android (arm64-v8a, Android 7+): native/build/dist/android/PokeSurvivor-<VERSION>-<BUILD>.apk, con el NDK en Docker
 # @step platforms/android platform "Android APK"
 # just android → APK arm64 (NDK en Docker).
 # @sub android
@@ -142,7 +142,7 @@ android: _env
 # just android-run instala y abre la Activity.
 # @next prep
 android-run:
-    adb install -r "native/build/dist/android/PokeSurvivor-$(tr -d ' \r\n' < VERSION).apk"
+    adb install -r native/build/dist/android/PokeSurvivor-*.apk
     adb shell am start -n com.devveda.pokesurvivor/.PokeSurvivorActivity
 
 # Compilar el APK e instalarlo y abrirlo en el teléfono conectado (depuración USB activada)
@@ -226,14 +226,14 @@ _ps5-title: _env
     docker run --rm --platform linux/amd64 -v "{{ps5gpu}}":/work -v "$PWD":/src ps5title bash /src/native/title/build-title.sh
     @just _ps5-zip
 
-# El título, también en native/build/dist/ps5/PokeSurvivor-<VERSION>-ps5.zip (la carpeta <titleId>, con todo el juego
+# El título, también en native/build/dist/ps5/PokeSurvivor-<VERSION>-<BUILD>-ps5.zip (la carpeta <titleId>, con todo el juego
 # dentro), como los paquetes de las demás plataformas: se descomprime en /data/homebrew/ de la consola.
 _ps5-zip:
     #!/usr/bin/env bash
     set -euo pipefail
     id=$(grep -o '"titleId": *"[A-Z0-9]*"' native/title/hello/param.json | grep -o 'PPSA[0-9]*')
-    out="$PWD/native/build/dist/ps5" zip="PokeSurvivor-$(cat VERSION)-ps5.zip"
-    mkdir -p "$out" && rm -f "$out/$zip"
+    out="$PWD/native/build/dist/ps5" zip="PokeSurvivor-$(cat VERSION)$(b=$(cat BUILD 2>/dev/null); echo ${b:+-$b})-ps5.zip"
+    mkdir -p "$out" && rm -f "$out"/PokeSurvivor-*-ps5.zip
     (cd "{{ps5gpu}}/poke-title/dist" && zip -qr "$out/$zip" "$id")
     ls -lh "$out/$zip"
 
@@ -268,6 +268,7 @@ test:
     node native/shim/net.test.cjs
     node native/shim/web.test.cjs
     node native/shim/updater.test.cjs
+    node native/shim/minver.test.cjs
 
 # Núcleo en C: compilarlo en este ordenador y compararlo con el JS
 core-test:

@@ -26,10 +26,10 @@ jobs:
       matrix:
         target: [linux, windows, android]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
       - name: just
         run: sudo apt-get update -qq && sudo apt-get install -y -qq just
       - name: Servidor (.env del secreto NATIVE_ENV)
@@ -39,8 +39,16 @@ jobs:
           test -n "$NATIVE_ENV" || { echo "Falta el secreto NATIVE_ENV"; exit 1; }
           printf '%s\n' "$NATIVE_ENV" > .env
           if grep -q '^UPDATE_SIGN_KEY=.' .env; then echo "NATIVE_ENV no debe llevar UPDATE_SIGN_KEY (usa UPDATE_PUBLIC_KEY)"; exit 1; fi
-      - name: Dependencias (SDK de Firebase, QuickJS, libdatachannel)
-        run: just deps
+      # Por separado, para ver en el registro cuál falla. El token: la API de GitHub sin él tiene un límite por IP
+      # (compartida entre los runners) y webrtc-src la usa.
+      - name: SDK de Firebase
+        run: make -C native vendor
+      - name: libdatachannel
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: make -C native webrtc-src
+      - name: QuickJS
+        run: make -C native -f Makefile.desktop quickjs-src
       - name: Clave de firma de Android
         if: matrix.target == 'android'
         env:
@@ -52,7 +60,7 @@ jobs:
         env:
           ANDROID_KS_PASS: ${{ secrets.ANDROID_KS_PASS }}
         run: just ${{ matrix.target }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target }}
           path: |
@@ -65,11 +73,11 @@ jobs:
     needs: build
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: dist/*
           generate_release_notes: true

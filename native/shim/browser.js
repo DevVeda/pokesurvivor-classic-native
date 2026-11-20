@@ -347,7 +347,7 @@
   const html = element('html'), head = element('head'), body = element('body');
   const document = eventTarget({
     documentElement: html, head, body, readyState: 'complete', hidden: false, visibilityState: 'visible',
-    title: 'PokéSurvivor Classic', cookie: '', referrer: '', activeElement: body, fullscreenElement: null,
+    title: 'PokéSurvivor Classic Native', cookie: '', referrer: '', activeElement: body, fullscreenElement: null,
     fonts: { load: () => Promise.resolve([]), ready: Promise.resolve(), check: () => true, add: noop },
     // @step native/dom data "UI nativa vs DOM"
     // El DOM web es un stub; ui.js pinta a 960x540 escalado con PS5_TEXTS.

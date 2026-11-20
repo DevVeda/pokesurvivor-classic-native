@@ -326,6 +326,19 @@ G.Social = (() => {
    * verdad (rin/{sala}/{uid}, que sólo escribe cada invitado), y los mensajes
    * son pequeños y van a huecos fijos (net.js).
    */
+  // @step lobby/minver decision "¿Versión válida para online?"
+  // config/online.min en Firestore (lo cambia el dueño del servidor): la versión mínima para las salas y el ranking, como
+  // número MAYOR*10000 + MENOR*100 + PARCHE (1.0.2 → 10002). Sin el documento o sin red, se deja jugar; las reglas
+  // (firestore.rules, verOk) lo exigen además a las marcas del ranking.
+  // @next create "sí"
+  const vnum = v => { const [a = 0, b = 0, c = 0] = String(v || '').split('.').map(n => parseInt(n, 10) || 0); return a * 10000 + b * 100 + c; };
+  const MY_VER = vnum(G.ENV.version);
+  const OLD_MSG = 'Esta versión ya no puede jugar online. Actualiza el juego a la última versión.';
+  let minVer = null;   // (se lee una vez por sesión; si falla, se vuelve a intentar la próxima)
+  async function onlineOk() {
+    if (minVer === null && fb) minVer = await fb.fs.collection('config').doc('online').get().then(d => (d.exists && +d.data().min) || 0, () => null);
+    return !(minVer > MY_VER);
+  }
   const WS_ERRORS = {
     gone: 'Esa sala ya no existe.',
     closed: 'La partida de esa sala ya ha empezado.',
@@ -340,6 +353,7 @@ G.Social = (() => {
   // @next watch
   async function createRoom() {
     if (room) return room;
+    if (!(await onlineOk())) throw Object.assign(Error(OLD_MSG), { msg: OLD_MSG });
     if (viaWS()) {
       const r = await G.RoomsWS.create(memberInfo());
       if (!r.ok) throw Error('No se pudo crear la sala (' + r.error + ').');
@@ -356,6 +370,7 @@ G.Social = (() => {
   // @step lobby/join
   async function joinRoom(id) {
     if (room && room.id === id) return { ok: true };
+    if (!(await onlineOk())) return { ok: false, error: OLD_MSG };
     if (room) await leaveRoom();
     if (viaWS()) {
       const r = await G.RoomsWS.join(id, memberInfo());
@@ -739,7 +754,7 @@ G.Social = (() => {
 
   return {
     start, stop, claimNick, request, accept, remove, publishProfile, getProfile, profileData,
-    createRoom, joinRoom, leaveRoom, setOpen, refreshMember, dropMember, setPlaying, ensureFriends,
+    createRoom, joinRoom, leaveRoom, onlineOk, OLD_MSG, version: MY_VER, setOpen, refreshMember, dropMember, setPlaying, ensureFriends,
     invite, acceptInvite, declineInvite,
     on(fn) { listeners.add(fn); }, off(fn) { listeners.delete(fn); },
     get me() { return me; },

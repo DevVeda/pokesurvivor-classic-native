@@ -32,7 +32,7 @@
   const COLORS = ['#ffcb3d', '#5fc8ff', '#7ee07a', '#ff8ad8'];
   const MOVES = Object.keys(G.Moves.BY_ID);   // (el orden de core/data.c: export-core.cjs)
   const BT_A = 0, BT_X = 2, BT_Y = 3, BT_L1 = 9, BT_R1 = 10, BT_UP = 11, BT_DOWN = 12, BT_LEFT = 13, BT_RIGHT = 14;   // botones de SDL (ps.pad().b)
-  let biome = 0, bosses = 0, frameNo = 0, drawMs = 0, hudMs = 0, drawT = 0;
+  let biome = 0, bosses = 0, drawMs = 0, hudMs = 0, drawT = 0;
   const hzs = new Map();         // id -> aviso en la lista de G.Hazards (sólo se pinta)
   let on = false, seed = 1, t = 0, spawnT = 0, logT = 0, stepMs = 0, frames = 0, kills = 0, downT = 0;
   const players = [];            // G.Player que sólo se pintan (el 0 es el de la partida)
@@ -51,7 +51,7 @@
   // Pantalla partida dinámica, en una sola copia: ver layout().
   let L = null;                  // el reparto de este fotograma (null: una cámara)
   const camAt = new Map();       // cámara (suavizada) de cada vista: «c» (la del centro) o el jugador que la lleva
-  const hudCv = [];              // lienzo del HUD de cada jugador (para su esquina)
+  const hudCv = [];              // [0]: lienzo del HUD compartido (el del J1 sin lo suyo; ver G.HUD.draw)
   const orbSel = [], seenOrb = new Set(), later = [];   // esfera elegida de cada uno; las ya explicadas; ventanas en cola
   let hudI = 0;                  // de quién es el HUD que se pinta (G.Orbs.sel / cd)
 
@@ -443,11 +443,9 @@
 
   // ---- subida de nivel: una carta por jugador, cada uno con su mando; la partida espera a todos ----
   function openCards(level) {
-    const W = ps.W, H = ps.H;
     cards = players.map((p, i) => {
-      const z = zoneOf(i, W, H);
       // (también los caídos: la experiencia es del equipo y la carta les sirve al revivir)
-      return { i, level: true, offer: p ? G.LevelUp.offer(p) : [], sel: 0, done: !p, held: padBits(i), zone: z, color: COLORS[i] };
+      return { i, level: true, offer: p ? G.LevelUp.offer(p) : [], sel: 0, done: !p, held: padBits(i), get zone() { return zoneOf(this.i, ps.W, ps.H); }, color: COLORS[i] };
     });
     for (const c of cards) if (!c.offer.length) c.done = true;
     cardsAt = ps.now();
@@ -486,7 +484,7 @@
         },
       }));
       if (p && p.bonds > 0 && !opt && !quiet) G.Spawner.say('J' + (i + 1) + ': ' + G.T('Guardas el vínculo: aprende otro movimiento para usarlo'), 3, true);
-      return { i, offer, sel: 0, done: !offer.length, held: padBits(i), zone: zoneOf(i, ps.W, ps.H), color: COLORS[i],
+      return { i, offer, sel: 0, done: !offer.length, held: padBits(i), get zone() { return zoneOf(this.i, ps.W, ps.H); }, color: COLORS[i],
                title: G.T('¡Vínculo!'), sub: G.T('Los movimientos unidos se lanzan a la vez y ocupan un solo hueco') };
     });
     if (sets.every(c => c.done)) return;
@@ -544,7 +542,7 @@
     const card = (k, swap) => ({ icon: k, title: G.T(swap ? 'Cambiar a' : 'Quedarme con') + ' ' + G.T(G.Items.BY[k].name), tag: G.T(G.Items.BY[k].name),
                                  desc: G.T(G.Items.BY[k].desc), color: '#ffd23f', apply: () => { if (swap) equip(i, k); } });
     cards = players.map((q, k) => ({ i: k, offer: k === i ? [card(p.item, false), card(id, true)] : [], sel: 0, done: k !== i,
-                                     held: padBits(k), zone: zoneOf(k, ps.W, ps.H), color: COLORS[k],
+                                     held: padBits(k), get zone() { return zoneOf(this.i, ps.W, ps.H); }, color: COLORS[k],
                                      title: G.T('¡Un objeto!'), sub: G.T('Sólo puedes llevar uno ·').replace(/\s*·$/, '') }));
     cardsAt = ps.now();
     if (globalThis.psCoreCards) psCoreCards(0, cards);
@@ -581,7 +579,7 @@
     const n = players.length;
     if (n <= 1) return [0, 0, w, h];
     if (n === 2) return [i * w / 2, 0, w / 2, h];
-    return [(i % 2) * w / 2, i < 2 ? h / 2 : 0, w / 2, h / 2];
+    return [(i % 2) * w / 2, i < 2 ? 0 : h / 2, w / 2, h / 2];   // (J1-J2 arriba, J3-J4 abajo: como sus esquinas)
   }
 
   // ---- el reparto de la pantalla (en píxeles de dibujo, ps.W × ps.H) ----
@@ -590,7 +588,7 @@
   // del centro de todos; si ninguno llega, no se parte. Al separarse se aleja (hasta ZMAX; partida, hasta ZROOM según el
   // sitio que le queda), y cada cámara pone su grupo en el centro de su zona poco a poco (sin salto al partirse).
   // ponytail: sin la cámara de la grieta y de Arceus (fase 5).
-  const R = 170, CX = ps.W / 2, CY = ps.H / 2, ZMAX = 1.6, ZROOM = 1.8;
+  const R = 170, ZMAX = 1.6, ZROOM = 1.8;
   function cellPoly(s, others) {   // la zona de un sitio: el rectángulo recortado por las mediatrices con los demás
     let poly = [[0, 0], [ps.W, 0], [ps.W, ps.H], [0, ps.H]];
     for (const o of others) {
@@ -618,7 +616,10 @@
   function layout() {
     const pts = players.map((p, i) => (p ? { i, p } : null)).filter(Boolean);
     if (pts.length < 2) return null;
-    const C = G.Camera, k = C.scale * C.zoom * C.dpr, A = ps.W / ps.H, zoom = C.zoom || 1;
+    const CX = ps.W / 2, CY = ps.H / 2;   // (cada vez: ps.W cambia al cambiar el tamaño de la ventana; fijo, el cruce de las vistas se descentraba)
+    // k: píxeles de ps.W por unidad del mundo. ps.W / C._cw y no C.dpr: en la web el lienzo de ui.js va hasta ×2 y el del juego
+    // hasta ×1,5 (web.js, game.js); con C.dpr, en una pantalla retina las cámaras de la pantalla partida no encuadraban a nadie.
+    const C = G.Camera, k = C.scale * C.zoom * (ps.W / (C._cw || ps.W)), A = ps.W / ps.H, zoom = C.zoom || 1;
     const dist = (ax, ay, bx, by) => Math.hypot((ax - bx) * k, (ay - by) * k * A);
     pts.forEach(e => { e.g = e; });
     const root = e => (e.g === e ? e : (e.g = root(e.g)));
@@ -668,7 +669,7 @@
     if (!L || !L.far) { C.follow(L ? L.cx : cx, L ? L.cy : cy, dt); camAt.clear(); return; }
     C.follow(L.cx, L.cy, dt);   // (la de siempre: avisos, temblores, lo que mira «la cámara»)
     for (const v of L.views) {   // cada vista con su cámara suavizada (como el follow de cada copia)
-      const c = camAt.get(v.src) || [C.x - CX / C.scale + (v.x - L.cx) + CX / C.scale, C.y + (v.y - L.cy)];
+      const c = camAt.get(v.src) || [C.x + (v.x - L.cx), C.y + (v.y - L.cy)];
       c[0] = G.U.damp(c[0], v.x, 9, dt); c[1] = G.U.damp(c[1], v.y, 9, dt);
       camAt.set(v.src, c);
       v.x = c[0]; v.y = c[1];
@@ -690,64 +691,142 @@
   };
   G.World.drawProp = function (ctx, p, t) { if (p.type !== 'grass' || grassNow) return propDraw0.call(this, ctx, p, t); };
 
-  // ---- el HUD de cada uno en su esquina: su barra (abajo) y su vida (encima) a la mitad ----
-  const HX0 = 180, HY0 = 406, HW = 600, HH = 134, LX0 = 8, LY0 = 10, LW = 176, LH = 46, HS = 0.5;   // (píxeles de dibujo)
-  // Esfera usada: su icono sale de su hueco, crece y se desvanece (0,5 s), con un aro de su color. Geometría de hud.js.
-  function orbPop(ctx, w, h, p) {
+  // ---- el HUD de cada uno en su esquina: «carta holo» (docs/mockups/couch-hud.html, B) ----
+  // J1 arriba a la izquierda, J2 arriba a la derecha, J3 abajo a la izquierda, J4 abajo a la derecha (= zoneOf). Cada carta:
+  // retrato con su color, «J1 · nombre», nivel, vida y mejoras; objeto + ataques en fila (el objeto hacia el borde); sus
+  // esferas en una bandeja 2×2 al lado interior, alineada arriba en las de arriba y abajo en las de abajo.
+  // Se pinta directo (píxeles lógicos, los de hud.js), sin pasar por el HUD de un jugador solo.
+  const HF = (wt, s) => `${wt} ${s}px Pixelify,"Segoe UI",system-ui,sans-serif`;
+  const BUFF = { atk: ['ATK', '#ff6b4d'], patk: ['ATK', '#ff6b4d'], satk: ['AT.E', '#c47bff'], spd: ['VEL', '#7fe0ff'], def: ['DEF', '#b0b8c8'], regen: ['REG', '#5fe08a'] };
+  const CS = 44, CG = 6, CM = 12, OS = 30, TW = 76, TH = 82;
+  const cardW = p => Math.max(300, 10 + CS + 14 + Math.max(4, p.slots.length) * (CS + CG) - CG + 10);
+  // Esfera usada: su icono sale de su hueco (centro x, y), crece y se desvanece (0,5 s), con un aro de su color.
+  function orbPop(ctx, p, x, y, os) {
     const u = p && p.orbUsed, t = u ? (performance.now() - u.at) / 500 : 1;
     if (t >= 1 || u.i < 0 || !G.Orbs.BY[u.id]) return;
-    const S = 54, OS = 40, OG = 6;   // (centradas como la barra: ox = w/2 - ow/2)
-    const x = w / 2 - (G.Orbs.SLOTS * OS + (G.Orbs.SLOTS - 1) * OG) / 2 + u.i * (OS + OG) + OS / 2, y = h - S - 18 - 30 - OS / 2;
     const e = 1 - (1 - t) ** 3, s = 24 * (1 + e);
     ctx.save(); ctx.globalAlpha = 1 - t;
-    ctx.beginPath(); ctx.arc(x, y, OS / 2 + e * 22, 0, 6.2832);
+    ctx.beginPath(); ctx.arc(x, y, os / 2 + e * 22, 0, 6.2832);
     ctx.lineWidth = 1 + 3 * (1 - t); ctx.strokeStyle = G.Orbs.BY[u.id].col; ctx.stroke();
     G.Icons.draw(ctx, 'orb:' + u.id, x - s / 2, y - s / 2 - e * 28, s);
     ctx.restore();
   }
+  function card(ctx, w, h, p, i, u) {
+    const RR = G.HUD.roundRect, CW = cardW(p), CH = 128, right = i % 2 === 1, top = i < 2;
+    const fill = (x, y, cw, ch, r, f, s, lw) => { RR(ctx, x, y, cw, ch, r); ctx.fillStyle = f; ctx.fill(); if (s) { ctx.lineWidth = lw; ctx.strokeStyle = s; ctx.stroke(); } };
+    ctx.save();
+    // Esquina en píxeles de pantalla; la carta, a escala u (a 1280x720, 1).
+    ctx.translate(right ? w - CM : CM, top ? CM + 8 : h - CM); ctx.scale(u, u);
+    const x0 = right ? -CW : 0, y0 = top ? 0 : -CH;
+    if (p.dead) ctx.globalAlpha = 0.55;
+    fill(x0, y0, CW, CH, 14, 'rgba(22,26,38,.88)', 'rgba(255,255,255,.12)', 1);
+    fill(x0, y0, CW, 6, 3, COLORS[i]);
+    // Retrato: su Pokémon, del tamaño del hueco.
+    const px = right ? x0 + CW - 58 : x0 + 10, py = y0 + 14;
+    fill(px, py, 48, 48, 12, 'rgba(255,255,255,.06)', COLORS[i], 2.5);
+    ctx.save(); RR(ctx, px, py, 48, 48, 12); ctx.clip();
+    const k = G.U.clamp(38 / (G.Sprites.bodyHeight(p.dex, p.scale) || 38), 0.3, 2);
+    ctx.translate(px + 24, py + 44); ctx.scale(k, k); p.anim.draw(ctx, 0, 0, { color: COLORS[i] });
+    ctx.restore();
+    // Nombre, nivel, vida y mejoras.
+    const tx = right ? px - 10 : px + 58, bw = CW - 78, bx = right ? x0 + 10 : tx;
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = HF(800, 13); ctx.fillStyle = '#eaf2ff'; ctx.textAlign = right ? 'right' : 'left';
+    ctx.fillText('J' + (i + 1) + ' · ' + p.mon.name, tx, y0 + 28);
+    ctx.font = HF(800, 11); ctx.fillStyle = '#ffcb3d'; ctx.textAlign = right ? 'left' : 'right';
+    ctx.fillText(G.T('Nv.') + ' ' + p.level, right ? x0 + 10 : x0 + CW - 10, y0 + 28);
+    G.HUD.bar(ctx, bx, y0 + 36, bw, 11, p.hp / p.maxHp, '#ff5f6d');
+    ctx.font = HF(700, 9); ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+    ctx.fillText(Math.ceil(p.hp) + ' / ' + Math.round(p.maxHp), bx + bw / 2, y0 + 45);
+    let cx = right ? bx + bw : bx;
+    ctx.font = HF(800, 9);
+    for (const key in p.buffs) {
+      const b = p.buffs[key]; if (!(b.n > 0) || !BUFF[key]) continue;
+      const s = BUFF[key][0] + ' ×' + b.n, tw = ctx.measureText(s).width + 12, x = right ? cx - tw : cx;
+      fill(x, y0 + 50, tw, 14, 7, 'rgba(0,0,0,.5)');
+      ctx.fillStyle = BUFF[key][1]; ctx.textAlign = 'left'; ctx.fillText(s, x + 6, y0 + 60.5);
+      cx += right ? -(tw + 5) : tw + 5;
+    }
+    // Objeto y ataques (como la barra de hud.js, con el activo un poco más alto).
+    const n = Math.max(4, p.slots.length), mw = n * (CS + CG) - CG, my = y0 + CH - CS - 8;
+    const ix = right ? x0 + CW - 10 - CS : x0 + 10, mx = right ? ix - 14 - mw : ix + CS + 14;
+    fill(ix, my, CS, CS, 10, p.item ? 'rgba(40,30,10,.92)' : 'rgba(10,16,28,.55)', p.item ? '#ffd23f' : 'rgba(140,170,210,.18)', p.item ? 2 : 1);
+    if (p.item) G.Icons.draw(ctx, p.item, ix + 7, my + 7, 30);
+    const cdOf = m => m.kind === 'orbit' ? 0 : G.U.clamp(m.t / (m.cd * p.cdMul), 0, 1);
+    for (let s = 0; s < n; s++) {
+      const g = p.slots[s] || [], m = g[0], on = s === p.active, fused = g.length > 1;
+      const x = mx + s * (CS + CG), y = on ? my - 5 : my, col = m ? G.U.TYPE_COLOR[m.type] : '#4a5468';
+      fill(x, y, CS, CS, 10, on ? 'rgba(20,30,50,.96)' : 'rgba(10,16,28,.85)',
+        fused ? '#ff8ad8' : m && m.evolved ? '#ffd23f' : on ? col : 'rgba(140,170,210,.25)', on ? 2.5 : 1.2);
+      if (!m) continue;
+      if (fused) {
+        g.forEach((gm, j) => {
+          const gx = x + 3 + (j % 2) * 20, gy = y + 3 + Math.floor(j / 2) * 20, f = cdOf(gm);
+          G.Icons.draw(ctx, 'move:' + gm.id, gx, gy, 18);
+          if (f > 0) { ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(gx, gy, 18, 18 * f); }
+        });
+        continue;
+      }
+      const f = cdOf(m);
+      if (f > 0) { ctx.save(); RR(ctx, x, y, CS, CS, 10); ctx.clip(); ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x, y, CS, CS * f); ctx.restore(); }
+      G.Icons.draw(ctx, 'move:' + m.id, x + 8, y + 6, 28);
+      const dots = m.def.maxLvl, dw = 4, tw = dots * dw + (dots - 1) * 2;
+      for (let d = 0; d < dots; d++) { ctx.fillStyle = d < m.lvl ? col : 'rgba(255,255,255,.18)'; ctx.fillRect(x + (CS - tw) / 2 + d * (dw + 2), y + CS - 7, dw, 3); }
+    }
+    // Bandeja de esferas: lado interior; arriba en las cartas de arriba, abajo en las de abajo.
+    const orbs = p.orbs || [], ob = p.orbBuff || {}, tx0 = right ? x0 - TW + 4 : x0 + CW - 4, ty0 = top ? y0 : y0 + CH - TH;
+    if (orbs.some(Boolean) || Object.keys(ob).some(id => ob[id] > 0)) {
+      fill(tx0, ty0, TW, TH, 12, 'rgba(22,26,38,.88)', 'rgba(255,255,255,.12)', 1);
+      const cdF = G.U.clamp(p.orbCd || 0, 0, 1), sel = orbSel[i] || 0;
+      for (let j = 0; j < 4; j++) {
+        const o = orbs[j], x = tx0 + 6 + (j % 2) * (OS + 4), y = ty0 + 8 + Math.floor(j / 2) * (OS + 4), pick = o && j === sel;
+        fill(x, y, OS, OS, 8, o ? 'rgba(20,24,44,.9)' : 'rgba(10,16,28,.45)', pick ? '#ffd23f' : o ? G.Orbs.BY[o.id].col : 'rgba(140,170,210,.18)', pick ? 2.5 : 1.2);
+        if (!o) continue;
+        G.Icons.draw(ctx, 'orb:' + o.id, x + 5, y + 5, 20);
+        if (cdF > 0) { ctx.save(); RR(ctx, x, y, OS, OS, 8); ctx.clip(); ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x, y, OS, OS * cdF); ctx.restore(); }
+        if (o.n > 1) { ctx.font = HF(800, 9); ctx.textAlign = 'right'; ctx.fillStyle = '#f4f8ff'; ctx.fillText('×' + o.n, x + OS - 2, y + OS - 3); }
+        if (p.orbUsed && p.orbUsed.i === j) orbPop(ctx, p, x + OS / 2, y + OS / 2, OS);
+      }
+      // Mejoras de esfera activas: icono y segundos, por fuera de la bandeja (debajo arriba, encima abajo).
+      Object.keys(ob).filter(id => ob[id] > 0 && G.Orbs.BY[id]).forEach((id, j) => {
+        const x = tx0 + 4 + j * 26, y = top ? ty0 + TH + 4 : ty0 - 34;
+        G.Icons.draw(ctx, 'orb:' + id, x, y, 20);
+        ctx.font = HF(800, 9); ctx.textAlign = 'center'; ctx.fillStyle = G.Orbs.BY[id].col; ctx.fillText(Math.ceil(ob[id]) + 's', x + 10, y + 30);
+      });
+    }
+    ctx.restore();
+  }
   const hudDraw0 = G.HUD.draw;
   G.HUD.draw = function (ctx, w, h, pl, st, ...rest) {
-    if (!(on && players.length > 1)) { const r = hudDraw0.call(this, ctx, w, h, pl, st, ...rest); if (on) orbPop(ctx, w, h, pl); return r; }
-    // Sin la lista de compañeros (cada uno tiene la suya en su esquina) ni «Ver a un compañero».
+    if (!(on && players.length > 1)) {
+      const r = hudDraw0.call(this, ctx, w, h, pl, st, ...rest);
+      // (la esfera usada, en su hueco de hud.js: centradas sobre la barra)
+      if (on && pl && pl.orbUsed) orbPop(ctx, pl, w / 2 - (4 * 40 + 3 * 6) / 2 + pl.orbUsed.i * 46 + 20, h - 54 - 18 - 30 - 20, 40);
+      return r;
+    }
+    // Lo que es de todos (experiencia del equipo, tiempo, jefes, flechas): el HUD del J1 sin sus esferas, mejoras ni
+    // compañeros, en un lienzo aparte; de él sale todo menos su vida (arriba a la izquierda) y su barra (abajo).
     const mates = Object.getOwnPropertyDescriptor(G.Coop, 'mates'), puppets = G.Coop.puppets;
     Object.defineProperty(G.Coop, 'mates', { get: () => [], configurable: true });
     G.Coop.puppets = () => [];
-    const h0 = ps.now();
-    frameNo++;
+    const h0 = ps.now(), cv = hudCv[0] || (hudCv[0] = Object.assign(document.createElement('canvas'), { width: ps.W, height: ps.H }));
     try {
-      players.forEach((p, i) => {
-        if (!p) return;
-        // ponytail: con 3 o 4, el HUD de los jugadores 2-4 se repinta un fotograma sí y otro no (el de antes vale);
-        // si la medida ([núcleo] … hud) dice que sobra, se quita.
-        if (i && players.length >= 3 && hudCv[i] && (frameNo + i) % 2) return;
-        const cv = hudCv[i] || (hudCv[i] = Object.assign(document.createElement('canvas'), { width: ps.W, height: ps.H }));
-        const c = cv.getContext('2d');
-        c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, ps.W, ps.H);
-        c.setTransform(ps.W / w, 0, 0, ps.H / h, 0, 0);
-        hudI = i;
-        hudDraw0.call(this, c, w, h, p, st, ...rest);
-        orbPop(c, w, h, p);
-        c.setTransform(1, 0, 0, 1, 0, 0);
-      });
-    } finally { Object.defineProperty(G.Coop, 'mates', mates); G.Coop.puppets = puppets; hudI = 0; hudMs += ps.now() - h0; }
-    // A la pantalla, del HUD del 1, lo que es de todos (experiencia del equipo, tiempo, jefes, flechas): todo menos su
-    // barra y su vida. Luego la esquina de cada uno, con un borde de su color.
-    const kx = w / ps.W, ky = h / ps.H, cv0 = hudCv[0];
-    ctx.drawImage(cv0, 0, 0, ps.W, LY0, 0, 0, w, LY0 * ky);
-    ctx.drawImage(cv0, LX0 + LW, LY0, ps.W - LX0 - LW, LH, (LX0 + LW) * kx, LY0 * ky, (ps.W - LX0 - LW) * kx, LH * ky);
-    ctx.drawImage(cv0, 0, LY0 + LH, ps.W, HY0 - LY0 - LH, 0, (LY0 + LH) * ky, w, (HY0 - LY0 - LH) * ky);
-    const W2 = ps.W, H2 = ps.H, bw = HW * HS, bh = HH * HS, lw = LW * HS, lh = LH * HS, M = 8;
+      const c = cv.getContext('2d');
+      c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, ps.W, ps.H);
+      c.setTransform(ps.W / w, 0, 0, ps.H / h, 0, 0);
+      hudDraw0.call(this, c, w, h, Object.assign(Object.create(players[0] || pl), { orbs: [], orbBuff: {}, buffs: {} }), st, ...rest);
+      c.setTransform(1, 0, 0, 1, 0, 0);
+    } finally { Object.defineProperty(G.Coop, 'mates', mates); G.Coop.puppets = puppets; }
+    const sx = ps.W / w, sy = ps.H / h, LX = 240, LY = 72, HY = h - 140;   // (vida de hud.js: hasta x 232, y 69; barra desde h-140)
+    const cut = (x, y, cw, ch) => ctx.drawImage(cv, x * sx, y * sy, cw * sx, ch * sy, x, y, cw, ch);
+    cut(0, 0, w, 10); cut(LX, 10, w - LX, LY - 10); cut(0, LY, w, HY - LY);
+    // Las cartas: a 1280x720, tamaño 1; nunca más anchas que media pantalla.
+    const u = G.U.clamp(Math.min(w / 1280, h / 720), 0.6, 1.3);
     players.forEach((p, i) => {
       if (!p || (cards && cards[i] && !cards[i].done)) return;   // (con su carta abierta, su esquina no sale)
-      const right = i % 2 === 1, bottom = i < 2;
-      const bx = right ? W2 - bw - M : M, by = bottom ? H2 - bh - M : M + lh + 3, ly = bottom ? by - lh - 3 : M;
-      for (const [sx, sy, sw, sh, dx, dy] of [[HX0, HY0, HW, HH, bx, by], [LX0, LY0, LW, LH, bx, ly]]) {
-        const dw = sw * HS, dh = sh * HS;
-        ctx.fillStyle = 'rgba(10,20,48,0.5)'; ctx.fillRect(dx * kx, dy * ky, dw * kx, dh * ky);
-        ctx.strokeStyle = COLORS[i]; ctx.lineWidth = 2; ctx.strokeRect(dx * kx - 1, dy * ky - 1, dw * kx + 2, dh * ky + 2);
-        ctx.drawImage(hudCv[i], sx, sy, sw, sh, dx * kx, dy * ky, dw * kx, dh * ky);
-      }
+      card(ctx, w, h, p, i, Math.min(u, (w / 2 - CM - 8) / (cardW(p) + TW)));
     });
+    hudMs += ps.now() - h0;
   };
 
   globalThis.psCore = {

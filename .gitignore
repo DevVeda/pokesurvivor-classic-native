@@ -34,6 +34,7 @@ docs/CONTACTOS_CREADORES.md
 .env.*
 # Generados desde .env por tools/apply-env.mjs
 js/env.js
+BUILD
 firestore.gen.rules
 
 # Caché local de wrangler (Cloudflare) y lo que sube just publish (tools/sign-update.mjs)

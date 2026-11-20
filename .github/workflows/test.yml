@@ -15,20 +15,23 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
       - name: Sintaxis del JS
         run: |
           for f in $(git ls-files 'js/*.js' 'native/shim/*.js' 'tools/*.mjs'); do node --check "$f"; done
           node tools/app-js.mjs && node --check js/app.js
       - name: Arnés de las pantallas
-        run: node native/shim/run-node.cjs 88 ui | tee harness.log | tail -3 && grep -q "errores: 0" harness.log
+        run: |
+          node native/shim/run-node.cjs 88 ui | tee harness.log | tail -3
+          grep -q "errores: 0" harness.log
       - name: Pruebas de los shims
         run: |
           node native/shim/net.test.cjs
           node native/shim/web.test.cjs
           node native/shim/updater.test.cjs
+          node native/shim/minver.test.cjs
       - name: Núcleo en C contra el JS
         run: make -C native core-test
