@@ -19,6 +19,8 @@ QJS := third_party/quickjs
 # El sistema de destino: el de aquí, o Windows (just windows: MinGW en Docker, TARGET_OS=Windows).
 TARGET_OS ?= $(shell uname -s)
 EXE := $(if $(filter Windows,$(TARGET_OS)),.exe,$(if $(filter Android,$(TARGET_OS)),.so))
+# (sin esto, en Windows el objetivo por defecto era la primera regla, la del icono: el .exe no se compilaba en limpio)
+.DEFAULT_GOAL := $(B)/pokesurvivor$(EXE)
 export PKG_CONFIG_PATH := $(shell brew --prefix openssl@3 2>/dev/null)/lib/pkgconfig:$(shell brew --prefix curl 2>/dev/null)/lib/pkgconfig:$(PKG_CONFIG_PATH)
 # (el make 3.81 de macOS no pasa las variables export a $(shell): se le da a mano)
 CURL_CFLAGS := $(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config --cflags libcurl 2>/dev/null)
